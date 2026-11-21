@@ -6,8 +6,10 @@ import Layout from './components/Layout'
 import ActiveYearPage from './pages/ActiveYearPage'
 import GradeTablesPage from './pages/GradeTablesPage'
 import LoginPage from './pages/LoginPage'
-import PlaceholderPage from './pages/PlaceholderPage'
 import PlansPage from './pages/PlansPage'
+import RecordFormPage from './pages/RecordFormPage'
+import RecordsPage from './pages/RecordsPage'
+import RecordStatusPage from './pages/RecordStatusPage'
 import UsersPage from './pages/UsersPage'
 import { ActiveYearProvider } from './settings/ActiveYearProvider'
 
@@ -30,13 +32,14 @@ export default function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Navigate to="/kayitlar" replace />} />
-          <Route path="/kayitlar" element={<PlaceholderPage title="İntibak kayıtları" step="Adım 6'da" />} />
-          <Route path="/yeni-form" element={<PlaceholderPage title="Yeni intibak formu" step="Adım 6'da" />} />
+          <Route path="/kayitlar" element={<RecordsPage />} />
+          <Route path="/kayitlar/:id" element={<RecordFormPage />} />
+          <Route path="/yeni-form" element={<RecordFormPage />} />
           <Route path="/ayarlar/kullanicilar" element={<UsersPage />} />
           <Route path="/ayarlar/ders-planlari" element={<PlansPage />} />
           <Route path="/ayarlar/not-tablolari" element={<GradeTablesPage />} />
           <Route path="/ayarlar/aktif-yil" element={<ActiveYearPage />} />
-          <Route path="/kayit-durumlari" element={<PlaceholderPage title="Kayıt durumları" step="Adım 6'da" />} />
+          <Route path="/kayit-durumlari" element={<RecordStatusPage />} />
           <Route path="*" element={<Navigate to="/kayitlar" replace />} />
         </Routes>
       </Layout>
