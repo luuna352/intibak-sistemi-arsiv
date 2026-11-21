@@ -23,7 +23,9 @@ type Options = { method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; body?: unknown }
 export async function api<T>(path: string, options: Options = {}): Promise<T> {
   const method = options.method ?? 'GET'
   const headers: Record<string, string> = {}
-  if (options.body !== undefined) headers['Content-Type'] = 'application/json'
+  // Dosya yüklemede (FormData) Content-Type yazılmaz: tarayıcı 'multipart/form-data; boundary=...' değerini kendisi koyar.
+  const isForm = options.body instanceof FormData
+  if (options.body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
   if (method !== 'GET') {
     const token = csrfToken()
     if (token) headers['X-XSRF-TOKEN'] = token
@@ -33,7 +35,7 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
   const res = await fetch(path, {
     method,
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body: options.body === undefined ? undefined : isForm ? (options.body as FormData) : JSON.stringify(options.body),
     credentials: 'same-origin',
   })
 

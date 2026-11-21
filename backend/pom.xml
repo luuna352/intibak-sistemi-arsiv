@@ -49,6 +49,12 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
+		<!-- Excel (.xlsx) okuma/yazma: ders planı yükleme ve boş şablon indirme -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.5.1</version>
+		</dependency>
 		<!-- PostgreSQL JDBC sürücüsü: sadece çalışırken gerekir -->
 		<dependency>
 			<groupId>org.postgresql</groupId>

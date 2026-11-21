@@ -7,6 +7,7 @@ import ActiveYearPage from './pages/ActiveYearPage'
 import GradeTablesPage from './pages/GradeTablesPage'
 import LoginPage from './pages/LoginPage'
 import PlaceholderPage from './pages/PlaceholderPage'
+import PlansPage from './pages/PlansPage'
 import UsersPage from './pages/UsersPage'
 import { ActiveYearProvider } from './settings/ActiveYearProvider'
 
@@ -32,7 +33,7 @@ export default function App() {
           <Route path="/kayitlar" element={<PlaceholderPage title="İntibak kayıtları" step="Adım 6'da" />} />
           <Route path="/yeni-form" element={<PlaceholderPage title="Yeni intibak formu" step="Adım 6'da" />} />
           <Route path="/ayarlar/kullanicilar" element={<UsersPage />} />
-          <Route path="/ayarlar/ders-planlari" element={<PlaceholderPage title="Ders planları" step="Adım 5'te" />} />
+          <Route path="/ayarlar/ders-planlari" element={<PlansPage />} />
           <Route path="/ayarlar/not-tablolari" element={<GradeTablesPage />} />
           <Route path="/ayarlar/aktif-yil" element={<ActiveYearPage />} />
           <Route path="/kayit-durumlari" element={<PlaceholderPage title="Kayıt durumları" step="Adım 6'da" />} />
