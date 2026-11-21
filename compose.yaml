@@ -1,0 +1,19 @@
+# Geliştirme veritabanı: PostgreSQL 17.
+# Başlatma: docker compose up -d   (şifre .env dosyasındaki POSTGRES_PASSWORD'den okunur)
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: intibak_sistemi
+      POSTGRES_USER: intibak_sistemi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env dosyasında tanımlı olmalı}
+    ports:
+      # Sadece bu bilgisayardan erişilebilir; ağdaki diğer makineler bağlanamaz.
+      # 5433: eski intibak projesinin veritabanı 5432'yi kullanıyor, ikisi aynı anda açık kalabilsin.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      # Veriler container silinse de bu volume'da kalır.
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

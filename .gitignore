@@ -1,0 +1,34 @@
+# AI asistan talimat dosyaları ve oturum notları (yerel kalır)
+AGENTS.md
+CLAUDE.md
+.claude/
+docs/devir-notu.md
+
+# Gizli bilgiler: şifreler (sadece örnek dosya repoya girer)
+.env
+.env.*
+!.env.example
+
+# İşletim sistemi
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editör / IDE ayarları
+.vscode/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.factorypath
+
+# Backend (Maven build çıktısı)
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Frontend (npm bağımlılıkları ve Vite build çıktısı)
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+npm-debug.log*
