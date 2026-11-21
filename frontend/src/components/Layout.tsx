@@ -15,6 +15,7 @@ import ExpandLess from '@mui/icons-material/ExpandLess'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 import MenuIcon from '@mui/icons-material/Menu'
 import { useAuth } from '../auth/auth'
+import { useActiveYear } from '../settings/activeYear'
 
 // Ayarlar menüsünün alt sayfaları (mockup'taki sıra).
 const settings = [
@@ -27,6 +28,7 @@ const settings = [
 // Girişten sonraki ortak çerçeve: üst çubuk + ☰ ile açılıp kapanan sol menü + sayfa içeriği.
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout, notice, clearNotice } = useAuth()
+  const { activeYear } = useActiveYear()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(true)
   // Bir ayar sayfasındaysak Ayarlar grubu açık başlar.
@@ -49,6 +51,11 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Typography variant="h6" sx={{ ml: 1, flexGrow: 1 }}>
             İntibak Sistemi
           </Typography>
+          {activeYear && (
+            <Typography variant="body2" sx={{ mr: 3, display: { xs: 'none', sm: 'block' } }}>
+              Aktif yıl: <b>{activeYear.label}</b>
+            </Typography>
+          )}
           <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}>
             {user?.displayName}
           </Typography>
