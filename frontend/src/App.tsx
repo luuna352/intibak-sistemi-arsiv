@@ -1,52 +1,38 @@
-import { useEffect, useState } from 'react'
-import Alert from '@mui/material/Alert'
-import AppBar from '@mui/material/AppBar'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
-import Paper from '@mui/material/Paper'
-import Toolbar from '@mui/material/Toolbar'
-import Typography from '@mui/material/Typography'
+import { Navigate, Route, Routes } from 'react-router'
+import { useAuth } from './auth/auth'
+import Layout from './components/Layout'
+import LoginPage from './pages/LoginPage'
+import PlaceholderPage from './pages/PlaceholderPage'
+import UsersPage from './pages/UsersPage'
 
-// Backend'in GET /api/health cevabı (HealthController.HealthResponse ile aynı alanlar).
-type Health = { status: string; database: string }
-
-// İskelet ekranı: backend'e ve veritabanına ulaşılabildiğini gösterir. Adım 2'de yerini giriş ekranı alacak.
+// Sayfa yönlendirmesi: giriş yoksa her adreste giriş ekranı, varsa menülü çerçeve içinde ilgili sayfa.
 export default function App() {
-  const [health, setHealth] = useState<Health | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { user, loading } = useAuth()
 
-  // Sayfa açılınca bir kez çalışır: /api/health çağrılır (Vite bunu localhost:8080'e yönlendirir).
-  useEffect(() => {
-    fetch('/api/health')
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json() as Promise<Health>
-      })
-      .then(setHealth)
-      .catch((e: Error) => setError(e.message))
-  }, [])
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
+  if (!user) return <LoginPage />
 
   return (
-    <>
-      <AppBar position="static" elevation={0}>
-        <Toolbar>
-          <Typography variant="h6">İntibak Sistemi</Typography>
-        </Toolbar>
-      </AppBar>
-      <Box sx={{ maxWidth: 480, mx: 'auto', mt: 6, px: 2 }}>
-        <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <img src="/logo.png" alt="Yalova Üniversitesi" style={{ width: 200, maxWidth: '100%' }} />
-          <Box sx={{ mt: 2 }}>
-            {!health && !error && <CircularProgress size={24} />}
-            {health && (
-              <Alert severity="success">
-                Backend: {health.status} · Veritabanı: {health.database}
-              </Alert>
-            )}
-            {error && <Alert severity="error">Backend'e ulaşılamadı ({error})</Alert>}
-          </Box>
-        </Paper>
-      </Box>
-    </>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Navigate to="/kayitlar" replace />} />
+        <Route path="/kayitlar" element={<PlaceholderPage title="İntibak kayıtları" step="Adım 6'da" />} />
+        <Route path="/yeni-form" element={<PlaceholderPage title="Yeni intibak formu" step="Adım 6'da" />} />
+        <Route path="/ayarlar/kullanicilar" element={<UsersPage />} />
+        <Route path="/ayarlar/ders-planlari" element={<PlaceholderPage title="Ders planları" step="Adım 5'te" />} />
+        <Route path="/ayarlar/not-tablolari" element={<PlaceholderPage title="Not tabloları" step="Adım 4'te" />} />
+        <Route path="/ayarlar/aktif-yil" element={<PlaceholderPage title="Aktif eğitim yılı" step="Adım 3'te" />} />
+        <Route path="/kayit-durumlari" element={<PlaceholderPage title="Kayıt durumları" step="Adım 6'da" />} />
+        <Route path="*" element={<Navigate to="/kayitlar" replace />} />
+      </Routes>
+    </Layout>
   )
 }

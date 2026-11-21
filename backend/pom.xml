@@ -44,6 +44,11 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
+		<!-- Giriş, session ve CSRF koruması -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
 		<!-- PostgreSQL JDBC sürücüsü: sadece çalışırken gerekir -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
@@ -55,6 +60,12 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Testlerde CSRF token'ı ve giriş yapmış kullanıcı taklidi (csrf(), user()) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
