@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import tr.edu.yalova.intibak.user.Role;
 import tr.edu.yalova.intibak.user.UserService;
 
 /** Ayarlar > Aktif eğitim yılı. Giriş gerektirir (SecurityConfig: /api/** authenticated). */
@@ -37,7 +36,6 @@ public class ActiveYearController {
     @PutMapping
     public ActiveYearService.ActiveYear set(@Valid @RequestBody ActiveYearRequest body, Authentication authentication) {
         // Giriş yapan rolün o anki görünen adı (örn. "Dr. Öğr. Üyesi Ad SOYAD") kayda metin olarak yazılır.
-        String changedBy = userService.get(Role.valueOf(authentication.getName())).displayName();
-        return activeYearService.set(body.startYear(), changedBy);
+        return activeYearService.set(body.startYear(), userService.displayNameOf(authentication));
     }
 }

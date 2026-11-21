@@ -2,6 +2,7 @@ package tr.edu.yalova.intibak.user;
 
 import java.util.List;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,15 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse get(Role role) {
         return UserResponse.from(find(role));
+    }
+
+    /**
+     * Giriş yapan kişinin o anki görünen adı. Kayıtlara "oluşturan / değiştiren" olarak bu METİN yazılır
+     * ("fatura mantığı"): rolün adı sonradan değişse de eski kayıtlar değişmez.
+     */
+    @Transactional(readOnly = true)
+    public String displayNameOf(Authentication authentication) {
+        return find(Role.valueOf(authentication.getName())).getDisplayName();
     }
 
     /**

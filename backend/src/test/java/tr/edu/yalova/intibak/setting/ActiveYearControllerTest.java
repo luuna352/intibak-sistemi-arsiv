@@ -20,8 +20,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import tr.edu.yalova.intibak.security.SecurityConfig;
-import tr.edu.yalova.intibak.user.Role;
-import tr.edu.yalova.intibak.user.UserResponse;
 import tr.edu.yalova.intibak.user.UserService;
 
 /** Aktif yıl endpoint'leri: giriş zorunlu, değiştirenin görünen adı servise iletilir. */
@@ -45,7 +43,7 @@ class ActiveYearControllerTest {
 
     @Test
     void savesWithTheCurrentDisplayName() throws Exception {
-        when(userService.get(Role.UYE_1)).thenReturn(new UserResponse(Role.UYE_1, "Üye 1", "Dr. Deneme", true));
+        when(userService.displayNameOf(org.mockito.ArgumentMatchers.any())).thenReturn("Dr. Deneme");
         when(activeYearService.set(2027, "Dr. Deneme")).thenReturn(new ActiveYearService.ActiveYear(
                 2027, "2027-2028", "Dr. Deneme", null, List.of()));
 

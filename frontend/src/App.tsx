@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router'
 import { useAuth } from './auth/auth'
 import Layout from './components/Layout'
 import ActiveYearPage from './pages/ActiveYearPage'
+import GradeTablesPage from './pages/GradeTablesPage'
 import LoginPage from './pages/LoginPage'
 import PlaceholderPage from './pages/PlaceholderPage'
 import UsersPage from './pages/UsersPage'
@@ -32,7 +33,7 @@ export default function App() {
           <Route path="/yeni-form" element={<PlaceholderPage title="Yeni intibak formu" step="Adım 6'da" />} />
           <Route path="/ayarlar/kullanicilar" element={<UsersPage />} />
           <Route path="/ayarlar/ders-planlari" element={<PlaceholderPage title="Ders planları" step="Adım 5'te" />} />
-          <Route path="/ayarlar/not-tablolari" element={<PlaceholderPage title="Not tabloları" step="Adım 4'te" />} />
+          <Route path="/ayarlar/not-tablolari" element={<GradeTablesPage />} />
           <Route path="/ayarlar/aktif-yil" element={<ActiveYearPage />} />
           <Route path="/kayit-durumlari" element={<PlaceholderPage title="Kayıt durumları" step="Adım 6'da" />} />
           <Route path="*" element={<Navigate to="/kayitlar" replace />} />
