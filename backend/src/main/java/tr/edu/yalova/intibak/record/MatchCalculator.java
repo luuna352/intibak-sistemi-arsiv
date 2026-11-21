@@ -92,7 +92,8 @@ final class MatchCalculator {
             } else if (rows != null) {
                 converted = convert(course.grade(), rows);
                 if (converted == null) {
-                    problems.add(course.name() + ": \"" + course.grade().trim() + "\" notu seçilen tabloda yok.");
+                    problems.add(course.name() + ": \"" + course.grade().trim() + "\" notu seçilen tabloda yok. Başka bir PT tablosu"
+                            + " seçin; hiçbir tablo uymuyorsa dekanlığa/manuel incelemeye aktarılmalı.");
                 }
             }
             grades.add(converted);

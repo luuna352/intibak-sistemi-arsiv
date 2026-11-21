@@ -289,7 +289,9 @@ export default function GradeTablesPage() {
       </Alert>
       <Typography variant="body2" color="text.secondary">
         Her satırda karşı üniversitenin harf notu ya da puan aralığı (ya da ikisi) bulunur. Puan aralıkları üst üste
-        binemez. Puan aralığında belirsizlik varsa öğrenci lehine en yüksek karşılık seçilir.
+        binemez. Puan aralığında belirsizlik varsa öğrenci lehine en yüksek karşılık seçilir: örneğin karşı
+        üniversitenin bir harfi 73-80 aralığına denk geliyorsa öğrenci 80 almış sayılır ve Yalova harfi 80'e göre
+        seçilir. Hiçbir tablo uymuyorsa iş dekanlığa/manuel incelemeye aktarılır.
       </Typography>
 
       <Dialog open={newOpen} onClose={() => setNewOpen(false)}>

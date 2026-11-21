@@ -11,6 +11,7 @@ import Paper from '@mui/material/Paper'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { api } from '../api/client'
+import GradeTablePreview from '../records/GradeTablePreview'
 import MatchTable from '../records/MatchTable'
 import {
   statusColor,
@@ -275,6 +276,8 @@ export default function RecordFormPage() {
           derslerin ortalaması iki harf arasında kalırsa öğrenci lehine üstteki not verilir. İngilizce Yalova dersi
           Türkçe dersle sayılmaz; FD/FF/DZ notuyla ders sayılmaz.
         </Typography>
+        {/* Seçilen PT tablosu burada da görünür: kontrol için başka sayfaya gitmeye gerek kalmasın. */}
+        <GradeTablePreview gradeTableId={gradeTableId} />
       </Paper>
 
       <Paper sx={{ p: 2, mb: 2 }}>
