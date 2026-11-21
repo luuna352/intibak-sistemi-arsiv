@@ -1,0 +1,101 @@
+package tr.edu.yalova.intibak.record;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+
+import tr.edu.yalova.intibak.curriculum.CourseLanguage;
+import tr.edu.yalova.intibak.grade.GradeTableRow;
+import tr.edu.yalova.intibak.grade.YalovaGrade;
+
+/** İntibak hesapları: not dönüşümü, öğrenci lehine yuvarlama, çoğa-bir, dil kuralı, sınıf/dönem eşikleri. */
+class MatchCalculatorTest {
+
+    // PT1'e benzer 100'lük tablo (85-89 ile 90-100 arasında 89.01-89.99 boşluğu var) + birkaç harf satırı.
+    private static final List<GradeTableRow> ROWS = List.of(
+            new GradeTableRow(0, null, new BigDecimal("90"), new BigDecimal("100"), YalovaGrade.AA),
+            new GradeTableRow(1, null, new BigDecimal("85"), new BigDecimal("89"), YalovaGrade.BA),
+            new GradeTableRow(2, null, new BigDecimal("75"), new BigDecimal("84"), YalovaGrade.BB),
+            new GradeTableRow(3, null, new BigDecimal("0"), new BigDecimal("49"), YalovaGrade.FF),
+            new GradeTableRow(4, "BB", null, null, YalovaGrade.BB),
+            new GradeTableRow(5, "CB", null, null, YalovaGrade.CB));
+
+    private static MatchCalculator.CourseIn incoming(String grade, String credit, CourseLanguage language) {
+        return new MatchCalculator.CourseIn(null, "Ders " + grade, new BigDecimal(credit), null, language, grade);
+    }
+
+    private static MatchCalculator.CourseIn yalova(String credit, CourseLanguage language) {
+        return new MatchCalculator.CourseIn("BSM101", "Yalova dersi", new BigDecimal(credit), null, language, null);
+    }
+
+    @Test
+    void convertsScoresAndLetters() {
+        assertThat(MatchCalculator.convert("92", ROWS)).isEqualTo(YalovaGrade.AA);
+        assertThat(MatchCalculator.convert("85,0", ROWS)).isEqualTo(YalovaGrade.BA);
+        assertThat(MatchCalculator.convert(" bb ", ROWS)).isEqualTo(YalovaGrade.BB);
+        assertThat(MatchCalculator.convert("XY", ROWS)).isNull();
+        assertThat(MatchCalculator.convert("101", ROWS)).isNull();
+    }
+
+    @Test
+    void scoreInGapGetsTheHigherGradeForTheStudent() {
+        // 89.5 hiçbir aralıkta değil: 85-89 (BA) ile 90-100 (AA) arasında; öğrenci lehine AA.
+        assertThat(MatchCalculator.convert("89.5", ROWS)).isEqualTo(YalovaGrade.AA);
+    }
+
+    @Test
+    void manyToOneUsesCreditWeightedAverageRoundedUp() {
+        // AA (4.0, 3 kredi) + BB (3.0, 3 kredi) = 3.5 -> BA.
+        MatchCalculator.MatchResult equal = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
+                List.of(incoming("92", "3", CourseLanguage.TR), incoming("BB", "3", CourseLanguage.TR)),
+                List.of(yalova("5", CourseLanguage.TR))), ROWS);
+        assertThat(equal.grade()).isEqualTo(YalovaGrade.BA);
+        assertThat(equal.incomingGrades()).containsExactly(YalovaGrade.AA, YalovaGrade.BB);
+
+        // BB (3.0) + CB (2.5), eşit kredi = 2.75: BB ile CB arasında, öğrenci lehine BB.
+        MatchCalculator.MatchResult between = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
+                List.of(incoming("BB", "2", CourseLanguage.TR), incoming("CB", "2", CourseLanguage.TR)),
+                List.of(yalova("4", CourseLanguage.TR))), ROWS);
+        assertThat(between.grade()).isEqualTo(YalovaGrade.BB);
+    }
+
+    @Test
+    void problemsBlockCounting() {
+        MatchCalculator.MatchResult language = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
+                List.of(incoming("92", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.EN))), ROWS);
+        assertThat(language.problems()).anyMatch(p -> p.contains("Eğitim dili farklı"));
+
+        MatchCalculator.MatchResult failing = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
+                List.of(incoming("30", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR))), ROWS);
+        assertThat(failing.problems()).anyMatch(p -> p.contains("Başarısız"));
+
+        MatchCalculator.MatchResult noTable = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
+                List.of(incoming("92", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR))), null);
+        assertThat(noTable.problems()).anyMatch(p -> p.contains("PT"));
+
+        // Sorunlu satır "sayıldı" işaretli olsa da krediye girmez.
+        MatchCalculator.Evaluation evaluation = MatchCalculator.evaluate(List.of(
+                new MatchCalculator.MatchIn(true, List.of(incoming("92", "4", CourseLanguage.TR)),
+                        List.of(yalova("4", CourseLanguage.EN))),
+                new MatchCalculator.MatchIn(true, List.of(incoming("92", "4", CourseLanguage.EN)),
+                        List.of(yalova("6", CourseLanguage.EN))),
+                new MatchCalculator.MatchIn(false, List.of(incoming("92", "4", CourseLanguage.TR)),
+                        List.of(yalova("3", CourseLanguage.TR)))), ROWS, TransferType.YATAY);
+        assertThat(evaluation.placement().countedCredit()).isEqualByComparingTo("6");
+    }
+
+    @Test
+    void placementThresholds() {
+        assertThat(MatchCalculator.place(new BigDecimal("29.5"), TransferType.YATAY).classLevel()).isEqualTo(1);
+        assertThat(MatchCalculator.place(new BigDecimal("30"), TransferType.YATAY).semester()).isEqualTo(3);
+        assertThat(MatchCalculator.place(new BigDecimal("60"), TransferType.YATAY).classLevel()).isEqualTo(2);
+        assertThat(MatchCalculator.place(new BigDecimal("60.5"), TransferType.YATAY).semester()).isEqualTo(5);
+        // DGS: kredi ne olursa olsun 3. sınıf (5. dönem).
+        MatchCalculator.Placement dgs = MatchCalculator.place(BigDecimal.ZERO, TransferType.DGS);
+        assertThat(dgs.classLevel()).isEqualTo(3);
+        assertThat(dgs.semester()).isEqualTo(5);
+    }
+}

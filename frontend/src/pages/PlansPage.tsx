@@ -107,11 +107,16 @@ type Total = { title: string; t: number; u: number; credit: number; ects: number
 // Sınıf sekmesinin yarıyıl toplamları. Toplam dosyadan okunmaz, ekrandaki derslerden hesaplanır.
 // Yarıyılda grup (örn. "İME'ye gidenler / gitmeyenler") varsa her grup için ayrı toplam: grupsuz ortak dersler
 // + o grubun dersleri.
+// En sonda sınıfın (yılın) toplamı: iki yarıyılın toplamı. Bir yarıyılda birden çok grup varsa her bileşim için
+// ayrı yıl toplamı çıkar (örn. 7. yarıyıl + 8. yarıyıl İME'ye gidenler).
 function semesterTotals(rows: EditRow[], tab: TabKey): Total[] {
   if (tab === 'S') return []
   const totals: Total[] = []
   const first = Number(tab) * 2 - 1
+  const perSemester: Total[][] = []
   for (const semester of [first, first + 1]) {
+    const semesterTotalsList: Total[] = []
+    perSemester.push(semesterTotalsList)
     const inSemester = rows.filter((r) => r.semester === String(semester))
     const common = inSemester.filter((r) => r.groupName.trim() === '')
     const groups = [...new Set(inSemester.map((r) => r.groupName.trim()).filter((g) => g !== ''))]
@@ -121,12 +126,27 @@ function semesterTotals(rows: EditRow[], tab: TabKey): Total[] {
     }))
     for (const v of variants) {
       const sum = (pick: (r: EditRow) => string) => v.rows.reduce((acc, r) => acc + (toNumber(pick(r)) ?? 0), 0)
-      totals.push({
+      const total = {
         title: `${semester}. yarıyıl${v.title} toplamı`,
         t: sum((r) => r.theory),
         u: sum((r) => r.practice),
         credit: sum((r) => r.credit),
         ects: sum((r) => r.ects),
+      }
+      totals.push(total)
+      semesterTotalsList.push(total)
+    }
+  }
+  // Yıl toplamı = 1. yarıyılın her grubu + 2. yarıyılın her grubu.
+  for (const a of perSemester[0]) {
+    for (const b of perSemester[1]) {
+      const groupsTitle = [a.title, b.title].map((t) => t.match(/\((.*)\)/)?.[1]).filter(Boolean).join(', ')
+      totals.push({
+        title: `${tab}. sınıf (yıl) toplamı${groupsTitle ? ` (${groupsTitle})` : ''}`,
+        t: a.t + b.t,
+        u: a.u + b.u,
+        credit: a.credit + b.credit,
+        ects: a.ects + b.ects,
       })
     }
   }

@@ -99,7 +99,7 @@ export default function ActiveYearPage() {
           </TableBody>
         </Table>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          İlgili yıla plan yüklenmemişse en yakın eski plan kullanılır (Ders planları adımında).
+          İlgili yıla plan yüklenmemişse en yakın eski plan kullanılır (Ayarlar &gt; Ders planları sayfasında görünür).
         </Typography>
       </Paper>
     </>

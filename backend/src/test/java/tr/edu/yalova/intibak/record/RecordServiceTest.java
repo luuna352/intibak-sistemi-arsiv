@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -17,6 +18,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import tr.edu.yalova.intibak.common.BadRequestException;
+import tr.edu.yalova.intibak.curriculum.CourseLanguage;
+import tr.edu.yalova.intibak.curriculum.CurriculumPlanRepository;
+import tr.edu.yalova.intibak.grade.GradeTable;
+import tr.edu.yalova.intibak.grade.GradeTableRepository;
+import tr.edu.yalova.intibak.grade.GradeTableRow;
+import tr.edu.yalova.intibak.grade.YalovaGrade;
 
 /** Kayıt kuralları: TC kontrolü, 4 durum geçişleri, iptal/geri al, arama ve TC gizleme. */
 class RecordServiceTest {
@@ -26,17 +33,20 @@ class RecordServiceTest {
     private static final String VALID_TC = "10000000146";
 
     private IntibakRecordRepository repository;
+    private GradeTableRepository gradeTables;
     private RecordService service;
 
     @BeforeEach
     void setUp() {
         repository = mock(IntibakRecordRepository.class);
-        service = new RecordService(repository, Clock.fixed(NOW, ZoneOffset.UTC));
+        gradeTables = mock(GradeTableRepository.class);
+        service = new RecordService(repository, gradeTables, mock(CurriculumPlanRepository.class),
+                Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     private static RecordService.Input input(String tc, String name) {
         return new RecordService.Input(tc, name, TransferType.YATAY, " Ankara Üniversitesi ", "",
-                LocalDate.of(2026, 9, 15));
+                LocalDate.of(2026, 9, 15), null, null, List.of(), true);
     }
 
     private IntibakRecord existing() {
@@ -75,7 +85,7 @@ class RecordServiceTest {
         assertThatThrownBy(() -> RecordService.validate(input(VALID_TC, " ")))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("Ad-soyad");
         assertThatThrownBy(() -> RecordService.validate(
-                new RecordService.Input(VALID_TC, "Ayşe", null, null, null, null)))
+                new RecordService.Input(VALID_TC, "Ayşe", null, null, null, null, null, null, null, true)))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("Geçiş türü");
     }
 
@@ -116,5 +126,46 @@ class RecordServiceTest {
         assertThat(service.list("1000000", false)).hasSize(1);
         assertThat(service.list("mehmet", false)).isEmpty();
         assertThat(service.list(null, false).get(0).tcMasked()).isEqualTo("100•••••146");
+    }
+
+    @Test
+    void saveNeedsConfirmation() {
+        RecordService.Input notConfirmed = new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY, null, null,
+                null, null, null, List.of(), false);
+
+        assertThatThrownBy(() -> service.create(notConfirmed, "x"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Onaylıyorum");
+    }
+
+    @Test
+    void savesMatchesAndComputesPlacement() {
+        GradeTable pt = new GradeTable("PT1", "100'lük", "x", NOW);
+        pt.replace("100'lük", List.of(new GradeTableRow(0, null, new BigDecimal("90"), new BigDecimal("100"),
+                YalovaGrade.AA)), "x", NOW);
+        when(gradeTables.existsById(1L)).thenReturn(true);
+        when(gradeTables.findById(1L)).thenReturn(Optional.of(pt));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        RecordService.MatchInput match = new RecordService.MatchInput(true,
+                List.of(new RecordService.CourseInput(null, "Programlama", new BigDecimal("4"), null,
+                        CourseLanguage.EN, "95")),
+                List.of(new RecordService.CourseInput("BSM151", "Algorithms and Programming 1",
+                        new BigDecimal("31"), new BigDecimal("7"), CourseLanguage.EN, null)));
+
+        RecordService.Detail saved = service.create(new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY,
+                null, null, null, 1L, null, List.of(match), true), "Üye 1");
+
+        RecordService.MatchView view = saved.evaluation().matches().get(0);
+        assertThat(view.incoming().get(0).convertedGrade()).isEqualTo(YalovaGrade.AA);
+        assertThat(view.problems()).isEmpty();
+        assertThat(saved.evaluation().placement().classLevel()).isEqualTo(2);
+
+        // Aynı satır dil farkıyla (Türkçe ders -> İngilizce Yalova dersi) sayılamaz: kayıt reddedilir.
+        RecordService.MatchInput turkish = new RecordService.MatchInput(true,
+                List.of(new RecordService.CourseInput(null, "Programlama", null, null, CourseLanguage.TR, "95")),
+                match.yalova());
+        assertThatThrownBy(() -> service.create(new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY,
+                null, null, null, 1L, null, List.of(turkish), true), "x"))
+                .hasMessageContaining("1. satır sayılamaz");
     }
 }

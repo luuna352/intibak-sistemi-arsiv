@@ -2,7 +2,10 @@ package tr.edu.yalova.intibak.record;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -10,6 +13,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 
 /** Bir öğrencinin intibak kaydı (V5__create_intibak_record.sql). Durum değişiklikleri bu sınıfın metotlarıyla olur. */
@@ -39,6 +44,19 @@ public class IntibakRecord {
 
     @Column(name = "registration_date")
     private LocalDate registrationDate;
+
+    // Değerlendirmede kullanılan not dönüşüm tablosu (PT) ve Yalova ders planı. Sadece id tutulur; plan silinse de
+    // eşleştirilen Yalova dersleri aşağıdaki satırlarda metin olarak durur.
+    @Column(name = "grade_table_id")
+    private Long gradeTableId;
+
+    @Column(name = "plan_id")
+    private Long planId;
+
+    // Ders eşleştirme satırları; kayıtla birlikte kaydedilir, listeden çıkan satır silinir.
+    @OneToMany(mappedBy = "record", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("position")
+    private List<IntibakMatch> matches = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -101,6 +119,17 @@ public class IntibakRecord {
         return status == RecordStatus.IPTAL;
     }
 
+    /** Eşleştirme tablosunu (PT, plan ve satırlar) ekrandaki haliyle değiştirir. */
+    public void replaceMatches(Long gradeTableId, Long planId, List<IntibakMatch> newMatches) {
+        this.gradeTableId = gradeTableId;
+        this.planId = planId;
+        matches.clear();
+        for (IntibakMatch match : newMatches) {
+            match.attachTo(this);
+            matches.add(match);
+        }
+    }
+
     private void apply(StudentInfo info) {
         this.tcNo = info.tcNo();
         this.fullName = info.fullName();
@@ -141,6 +170,18 @@ public class IntibakRecord {
 
     public LocalDate getRegistrationDate() {
         return registrationDate;
+    }
+
+    public Long getGradeTableId() {
+        return gradeTableId;
+    }
+
+    public Long getPlanId() {
+        return planId;
+    }
+
+    public List<IntibakMatch> getMatches() {
+        return matches;
     }
 
     public RecordStatus getStatus() {

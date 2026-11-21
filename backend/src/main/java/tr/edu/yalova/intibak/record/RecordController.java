@@ -49,6 +49,12 @@ public class RecordController {
         return service.statusCounts();
     }
 
+    /** Önizleme: formu kaydetmeden notları, sayılan krediyi ve sınıfı hesaplar (veritabanına yazmaz). */
+    @PostMapping("/evaluate")
+    public RecordService.Evaluation evaluate(@RequestBody RecordService.Input body) {
+        return service.evaluate(body);
+    }
+
     @GetMapping("/{id}")
     public RecordService.Detail get(@PathVariable long id) {
         return service.get(id);
