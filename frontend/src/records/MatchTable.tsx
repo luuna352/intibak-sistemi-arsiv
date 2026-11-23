@@ -13,6 +13,7 @@ import Typography from '@mui/material/Typography'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import ContentComparison from './ContentComparison'
 import {
+  courseKey,
   emptyIncoming,
   emptyMatch,
   type EditIncoming,
@@ -35,6 +36,20 @@ const label = (c: YalovaCourse) =>
   `${c.code ? c.code + ' ' : ''}${c.name} (${c.credit ?? '-'} kr, ${c.ects ?? '-'} AKTS${c.language === 'EN' ? ', EN' : ''})`
 // Plandaki ders ile seçili ders aynı mı? Kod + ad birlikte karşılaştırılır (kodu olmayan dersler de var).
 const same = (a: YalovaCourse, b: YalovaCourse) => a.code === b.code && a.name === b.name
+
+/**
+ * Yalova dersleri seçilince: yeni seçilen dersin konuları plandaki içeriğinden gelir (A2). Daha önce konusu yazılmış
+ * ders değişmez; komisyonun yazdığı ya da işaretlediği konular ezilmez. İçerik dersin içinde taşınmaz.
+ */
+function withPlanTopics(m: EditMatch, value: YalovaCourse[]): Partial<EditMatch> {
+  const yalovaTopics = { ...m.yalovaTopics }
+  for (const c of value) {
+    const key = courseKey(c)
+    if (!yalovaTopics[key] && c.content) yalovaTopics[key] = { text: c.content, covered: [] }
+  }
+  const yalova = value.map(({ code, name, credit, ects, language }) => ({ code, name, credit, ects, language }))
+  return { yalova, yalovaTopics }
+}
 
 /**
  * Ders eşleştirme tablosu: her satırın solunda karşı kurumun ders(ler)i, sağında Yalova'nın ders(ler)i.
@@ -137,7 +152,7 @@ export default function MatchTable({ matches, onChange, results, planCourses, di
                   value={m.yalova}
                   getOptionLabel={label}
                   isOptionEqualToValue={same}
-                  onChange={(_, value) => update(m.key, { yalova: value })}
+                  onChange={(_, value) => update(m.key, withPlanTopics(m, value))}
                   noOptionsText="Planda ders yok (önce ders planı seçin)"
                   renderInput={(params) => <TextField {...params} placeholder="Kod ya da ad yazın" />}
                   sx={{ mt: 1 }}

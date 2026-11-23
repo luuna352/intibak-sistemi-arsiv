@@ -113,8 +113,16 @@ export type EditIncoming = {
   content: string
 }
 
-// Plandan seçilen Yalova dersi (kayda metin olarak kopyalanır).
-export type YalovaCourse = { code: string | null; name: string; credit: number | null; ects: number | null; language: Language }
+// Plandan seçilen Yalova dersi (kayda metin olarak kopyalanır). content: plandaki içeriği (sadece plan listesinde
+// gelir; seçilince konulara kopyalanır, dersin kendisinde tutulmaz).
+export type YalovaCourse = {
+  code: string | null
+  name: string
+  credit: number | null
+  ects: number | null
+  language: Language
+  content?: string | null
+}
 
 // Bir Yalova dersinin konuları: text = her satır bir konu (kutuda yazıldığı gibi), covered = karşılanıyor
 // işaretli konuların metinleri. Metin ayrı tutulur ki yazarken boş satır (yeni konu) kaybolmasın.
@@ -208,7 +216,14 @@ export function toMatchInput(m: EditMatch) {
     })),
     yalova: m.yalova.map((c) => {
       const t = m.yalovaTopics[courseKey(c)] ?? { text: '', covered: [] }
-      return { ...c, topics: lines(t.text).map((text) => ({ text, covered: t.covered.includes(text) })) }
+      return {
+        code: c.code,
+        name: c.name,
+        credit: c.credit,
+        ects: c.ects,
+        language: c.language,
+        topics: lines(t.text).map((text) => ({ text, covered: t.covered.includes(text) })),
+      }
     }),
   }
 }

@@ -36,6 +36,8 @@ type Course = {
   practiceHours: number | null
   credit: number
   ects: number
+  // Dersin içeriği, her satır bir konu (boşsa girilmemiş).
+  content: string | null
 }
 type Detail = {
   id: number
@@ -64,7 +66,11 @@ type EditRow = {
   practice: string
   credit: string
   ects: string
+  content: string
 }
+
+// İçerik kutusundaki konu sayısı (boş satırlar sayılmaz).
+const topicCount = (content: string) => content.split('\n').filter((x) => x.trim() !== '').length
 
 // Sekmeler: 1-4. sınıf (her sınıf 2 yarıyıl) ve yarıyılı olmayan seçmeli havuzları.
 type TabKey = '1' | '2' | '3' | '4' | 'S'
@@ -91,6 +97,7 @@ const toEdit = (c: Course): EditRow => ({
   practice: str(c.practiceHours),
   credit: str(c.credit),
   ects: str(c.ects),
+  content: c.content ?? '',
 })
 
 // "3,5" gibi Türkçe virgüllü yazımı da kabul eder; boş kutu = değer yok (null).
@@ -170,6 +177,9 @@ export default function PlansPage() {
   const [uploadYear, setUploadYear] = useState('')
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  // İçeriği düzenlenen satır (key) ve pencerede yazılan metin; "Tamam" ile satıra geçer, "Kaydet" ile kalıcı olur.
+  const [contentKey, setContentKey] = useState<number | null>(null)
+  const [contentText, setContentText] = useState('')
 
   function show(d: Detail) {
     setDetail(d)
@@ -230,6 +240,7 @@ export default function PlansPage() {
         practice: '',
         credit: '',
         ects: '',
+        content: '',
       },
     ])
   }
@@ -256,6 +267,7 @@ export default function PlansPage() {
             practiceHours: toNumber(r.practice),
             credit: toNumber(r.credit),
             ects: toNumber(r.ects),
+            content: r.content,
           })),
         },
       })
@@ -384,6 +396,7 @@ export default function PlansPage() {
                   <TableCell>U</TableCell>
                   <TableCell>Kredi</TableCell>
                   <TableCell>AKTS</TableCell>
+                  <TableCell>İçerik</TableCell>
                   <TableCell />
                 </TableRow>
               </TableHead>
@@ -467,6 +480,16 @@ export default function PlansPage() {
                       </TableCell>
                     ))}
                     <TableCell>
+                      {/* Dersin içeriği (kural 5): formda bu ders seçilince konular kendiliğinden gelir. */}
+                      <Button size="small" sx={{ whiteSpace: 'nowrap' }}
+                        onClick={() => {
+                          setContentKey(r.key)
+                          setContentText(r.content)
+                        }}>
+                        {topicCount(r.content) > 0 ? `${topicCount(r.content)} konu` : 'Ekle'}
+                      </Button>
+                    </TableCell>
+                    <TableCell>
                       <IconButton
                         size="small"
                         aria-label="Dersi sil"
@@ -490,7 +513,7 @@ export default function PlansPage() {
                           {fmt(n)}
                         </TableCell>
                       ))}
-                      <TableCell />
+                      <TableCell colSpan={2} />
                     </TableRow>
                   ))}
                 </TableFooter>
@@ -519,6 +542,32 @@ export default function PlansPage() {
           </Typography>
         </>
       )}
+
+      <Dialog open={contentKey !== null} onClose={() => setContentKey(null)} fullWidth maxWidth="md">
+        <DialogTitle>
+          Ders içeriği · {rows.find((r) => r.key === contentKey)?.code} {rows.find((r) => r.key === contentKey)?.name}
+        </DialogTitle>
+        <DialogContent>
+          <TextField multiline minRows={10} fullWidth value={contentText} sx={{ mt: 1 }}
+            label={`Konular (her satır bir konu) · ${topicCount(contentText)} konu`}
+            placeholder={'Örnek:\nDiziler ve bağlı listeler\nYığın ve kuyruk\nAğaçlar'}
+            onChange={(e) => setContentText(e.target.value)} />
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            İntibak formunda bu ders seçilince konular içerik karşılaştırmasına kendiliğinden gelir. Değişiklik planın
+            "Kaydet" düğmesiyle kalıcı olur. Excel tekrar yüklenirse içerik, kodu ve adı aynı olan derste korunur.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setContentKey(null)}>Vazgeç</Button>
+          <Button variant="contained"
+            onClick={() => {
+              setRows(rows.map((r) => (r.key === contentKey ? { ...r, content: contentText } : r)))
+              setContentKey(null)
+            }}>
+            Tamam
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={uploadOpen} onClose={() => setUploadOpen(false)}>
         <DialogTitle>Ders planı yükle</DialogTitle>

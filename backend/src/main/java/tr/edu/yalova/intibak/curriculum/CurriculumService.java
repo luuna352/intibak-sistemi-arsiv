@@ -5,7 +5,11 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.function.IntFunction;
 
 import org.springframework.stereotype.Service;
@@ -25,6 +29,9 @@ public class CurriculumService {
     static final int MAX_YEAR = 2100;
     // NUMERIC(4,1) sütununa sığan en büyük değer.
     private static final BigDecimal MAX_NUMBER = new BigDecimal("999.9");
+    // Bir dersin içeriği en fazla bu kadar karakter olabilir (V11 CHECK kuralıyla aynı).
+    static final int MAX_CONTENT = 20000;
+    private static final Locale TR = Locale.forLanguageTag("tr");
 
     private final CurriculumPlanRepository repository;
     private final Clock clock;
@@ -39,10 +46,13 @@ public class CurriculumService {
     public record Summary(Long id, int startYear, String label, String sourceFileName, int courseCount) {
     }
 
-    /** Bir ders. Ekrandan gelirken de aynı alanlar kullanılır (CourseInput). */
+    /**
+     * Bir ders. Ekrandan gelirken de aynı alanlar kullanılır (CourseInput). content: dersin içeriği, her satır bir
+     * konu (boşsa girilmemiş).
+     */
     public record Course(Integer semester, String groupName, String code, String name, boolean compulsory,
             CourseLanguage language, BigDecimal theoryHours, BigDecimal practiceHours, BigDecimal credit,
-            BigDecimal ects) {
+            BigDecimal ects, String content) {
     }
 
     public record Detail(Long id, int startYear, String label, String sourceFileName, String createdByName,
@@ -52,7 +62,7 @@ public class CurriculumService {
     /** Ekrandan ya da Excel'den gelen ders; eksik alan olabilir, bu yüzden kutulu tipler (Boolean, null olabilir). */
     public record CourseInput(Integer semester, String groupName, String code, String name, Boolean compulsory,
             CourseLanguage language, BigDecimal theoryHours, BigDecimal practiceHours, BigDecimal credit,
-            BigDecimal ects) {
+            BigDecimal ects, String content) {
     }
 
     /**
@@ -92,6 +102,9 @@ public class CurriculumService {
         List<PlanCourse> courses = validate(read.courses(), i -> "Excel " + read.excelRows().get(i) + ". satır");
 
         CurriculumPlan plan = repository.findByStartYear(startYear).orElse(null);
+        if (plan != null) {
+            keepContents(plan.getCourses(), courses);
+        }
         if (plan == null) {
             // Yeni plan: oluşturan yazılır, "son değiştiren" boş kalır.
             plan = new CurriculumPlan(startYear, actorName, Instant.now(clock));
@@ -179,10 +192,53 @@ public class CurriculumService {
             checkNumber(in.credit(), prefix + "kredi");
             checkNumber(in.ects(), prefix + "AKTS");
 
-            courses.add(new PlanCourse(i, in.semester(), group, code, name, in.compulsory(), in.language(),
-                    in.theoryHours(), in.practiceHours(), in.credit(), in.ects()));
+            String content = normalizeContent(in.content());
+            if (content != null && content.length() > MAX_CONTENT) {
+                throw new BadRequestException(prefix + "içerik en fazla " + MAX_CONTENT + " karakter olabilir.");
+            }
+
+            PlanCourse course = new PlanCourse(i, in.semester(), group, code, name, in.compulsory(), in.language(),
+                    in.theoryHours(), in.practiceHours(), in.credit(), in.ects());
+            course.setContent(content);
+            courses.add(course);
         }
         return courses;
+    }
+
+    /**
+     * İçerik metnini düzenler: her satır kırpılır, boş satırlar atlanır (her satır bir konu). Hiç konu yoksa null.
+     */
+    static String normalizeContent(String content) {
+        if (content == null) {
+            return null;
+        }
+        String joined = content.lines().map(String::trim).filter(line -> !line.isEmpty())
+                .collect(Collectors.joining("\n"));
+        return joined.isEmpty() ? null : joined;
+    }
+
+    /**
+     * Excel tekrar yüklenince dersler yeniden oluşur; Excel'de içerik sütunu olmadığı için içerikler kaybolmasın diye
+     * eski plandaki aynı kodlu ve aynı adlı dersin içeriği yeni derse aktarılır.
+     */
+    static void keepContents(List<PlanCourse> oldCourses, List<PlanCourse> newCourses) {
+        Map<String, String> contents = new HashMap<>();
+        for (PlanCourse c : oldCourses) {
+            if (c.getContent() != null) {
+                contents.putIfAbsent(courseKey(c), c.getContent());
+            }
+        }
+        for (PlanCourse c : newCourses) {
+            if (c.getContent() == null) {
+                c.setContent(contents.get(courseKey(c)));
+            }
+        }
+    }
+
+    // Aynı ders mi? Kod ve ad; büyük/küçük harf ve fazla boşluk fark etmez.
+    private static String courseKey(PlanCourse c) {
+        String code = c.getCode() == null ? "" : c.getCode().trim().toUpperCase(TR);
+        return code + "|" + c.getName().trim().replaceAll("\\s+", " ").toLowerCase(TR);
     }
 
     private static void checkNumber(BigDecimal value, String field) {
@@ -224,7 +280,8 @@ public class CurriculumService {
     private static Detail toDetail(CurriculumPlan p) {
         List<Course> courses = p.getCourses().stream()
                 .map(c -> new Course(c.getSemester(), c.getGroupName(), c.getCode(), c.getName(), c.isCompulsory(),
-                        c.getLanguage(), c.getTheoryHours(), c.getPracticeHours(), c.getCredit(), c.getEcts()))
+                        c.getLanguage(), c.getTheoryHours(), c.getPracticeHours(), c.getCredit(), c.getEcts(),
+                        c.getContent()))
                 .toList();
         return new Detail(p.getId(), p.getStartYear(), label(p.getStartYear()), p.getSourceFileName(),
                 p.getCreatedByName(), p.getCreatedAt(), p.getUpdatedByName(), p.getUpdatedAt(), courses);

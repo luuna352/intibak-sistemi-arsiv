@@ -36,7 +36,7 @@ class CurriculumServiceTest {
     private static CurriculumService.CourseInput course(Integer semester, String group, String credit) {
         return new CurriculumService.CourseInput(semester, group, "BSM101", "Ders", true, CourseLanguage.TR,
                 new BigDecimal("3"), BigDecimal.ZERO, credit == null ? null : new BigDecimal(credit),
-                new BigDecimal("5"));
+                new BigDecimal("5"), null);
     }
 
     @Test
@@ -85,6 +85,33 @@ class CurriculumServiceTest {
         assertThat(plan.createdByName()).isEqualTo("Dr. Deneme");
         assertThat(plan.updatedByName()).isNull();
         assertThat(plan.courses()).hasSize(1);
+    }
+
+    @Test
+    void contentIsNormalizedAndKeptWhenExcelIsReloaded() {
+        // Her satır bir konu: satırlar kırpılır, boş satırlar atlanır; hiç konu yoksa içerik yok.
+        assertThat(CurriculumService.normalizeContent("  Diziler \n\n Ağaçlar\r\n")).isEqualTo("Diziler\nAğaçlar");
+        assertThat(CurriculumService.normalizeContent(" \n ")).isNull();
+
+        // Var olan planda BSM201'in içeriği var; Excel tekrar yüklenince (içerik sütunu yok) içerik korunur.
+        CurriculumPlan plan = new CurriculumPlan(2025, "x", NOW);
+        PlanCourse old = new PlanCourse(0, 3, null, "BSM201", "Veri Yapıları", true, CourseLanguage.TR,
+                new BigDecimal("3"), BigDecimal.ZERO, new BigDecimal("3"), new BigDecimal("5"));
+        old.setContent("Diziler\nAğaçlar");
+        plan.replaceCourses(List.of(old), null, null);
+        when(repository.findByStartYear(2025)).thenReturn(Optional.of(plan));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        byte[] file = PlanExcel.write(List.of(
+                new PlanCourse(0, 3, null, "bsm201", "Veri  Yapıları", true, CourseLanguage.TR, new BigDecimal("3"),
+                        BigDecimal.ZERO, new BigDecimal("3"), new BigDecimal("5")),
+                new PlanCourse(1, 3, null, "BSM202", "Veri Tabanı", true, CourseLanguage.TR, new BigDecimal("3"),
+                        BigDecimal.ZERO, new BigDecimal("3"), new BigDecimal("5"))));
+
+        CurriculumService.Detail reloaded = service.importExcel(2025, "plan.xlsx", new ByteArrayInputStream(file),
+                "Sekreter");
+
+        assertThat(reloaded.courses().get(0).content()).isEqualTo("Diziler\nAğaçlar");
+        assertThat(reloaded.courses().get(1).content()).isNull();
     }
 
     @Test

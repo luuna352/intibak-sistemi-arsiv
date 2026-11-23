@@ -74,7 +74,9 @@ final class PlanExcel {
                         number(cells.get(6), where + "T"),
                         number(cells.get(7), where + "U"),
                         number(cells.get(8), where + "Kredi"),
-                        number(cells.get(9), where + "AKTS")));
+                        number(cells.get(9), where + "AKTS"),
+                        // Excel'de içerik sütunu yok; yüklerken eski plandaki içerik korunur (CurriculumService).
+                        null));
                 excelRows.add(r + 1);
             }
             return new ReadResult(courses, excelRows);

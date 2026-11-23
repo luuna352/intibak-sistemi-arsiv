@@ -62,6 +62,10 @@ public class PlanCourse {
     @Column(nullable = false, precision = 4, scale = 1)
     private BigDecimal ects;
 
+    // Dersin içeriği, her satır bir konu (V11). Boşsa içerik girilmemiştir.
+    @Column(columnDefinition = "TEXT")
+    private String content;
+
     protected PlanCourse() {
     }
 
@@ -79,6 +83,15 @@ public class PlanCourse {
         this.practiceHours = practiceHours;
         this.credit = credit;
         this.ects = ects;
+    }
+
+    /** İçerik kurucuya değil buraya verilir: Excel'de içerik sütunu yok, içerik ayrıca girilir. */
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public String getContent() {
+        return content;
     }
 
     void attachTo(CurriculumPlan plan) {
