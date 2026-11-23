@@ -58,6 +58,13 @@ ya da tabloda olmayan notla satır sayılmaz; "Sayıldı mı?" kutusu satırı s
 - **A3:** öğrencinin ders içerik belgesi: kayda PDF/DOCX yükleme, "Belgede bul" ile karşı dersin bölümünü getirme.
   Taranmış (resim) PDF okunmaz, içerik elle yapıştırılır.
 
+## Teyit edilecekler
+
+- **DGS = 5. dönem:** hoca "5. dönem miydi tam emin değilim, Aykut Bey'e / yönetmeliğe sorun" dedi. Sistem şu an DGS'yi
+  5. döneme yerleştiriyor; Aykut Bey'e sorulacak.
+- **Yerleşim öneri mi:** hoca sistemin sınıfı/dönemi "önereceğini" söyledi. Şu an hesap otomatik ve elle
+  değiştirilemiyor; komisyonun değiştirebilmesi istenirse eklenecek.
+
 ## Uygulanmayan öneriler (kullanıcı onaylarsa eklenir)
 
 Bunlar hocanın ses kaydı özetinden (23 Kasım) ya da Senato Esasları'ndan geliyor; **şu an uygulanmıyor**.
