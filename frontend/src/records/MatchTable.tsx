@@ -16,6 +16,7 @@ import {
   courseKey,
   emptyIncoming,
   emptyMatch,
+  type DocumentSection,
   type EditIncoming,
   type EditMatch,
   type MatchView,
@@ -29,6 +30,8 @@ type Props = {
   results: MatchView[]
   // Seçilen Yalova planının dersleri (sağ taraftaki açılır listenin seçenekleri).
   planCourses: YalovaCourse[]
+  // Öğrencinin ders içerik belgesinin bölümleri (A3); içerik karşılaştırmasında seçilir.
+  sections: DocumentSection[]
   disabled: boolean
 }
 
@@ -56,7 +59,7 @@ function withPlanTopics(m: EditMatch, value: YalovaCourse[]): Partial<EditMatch>
  * Solda birden çok ders = çoğa-bir, sağda birden çok ders = bire-çok. Notların Yalova karşılığı, birleşik not ve
  * satırın sorunları backend hesabından (results) gelir.
  */
-export default function MatchTable({ matches, onChange, results, planCourses, disabled }: Props) {
+export default function MatchTable({ matches, onChange, results, planCourses, sections, disabled }: Props) {
   const update = (key: number, change: Partial<EditMatch>) =>
     onChange(matches.map((m) => (m.key === key ? { ...m, ...change } : m)))
 
@@ -160,7 +163,7 @@ export default function MatchTable({ matches, onChange, results, planCourses, di
               </Box>
             </Box>
 
-            <ContentComparison match={m} result={r} disabled={disabled} onChange={(change) => update(m.key, change)} />
+            <ContentComparison match={m} result={r} sections={sections} disabled={disabled} onChange={(change) => update(m.key, change)} />
 
             {r && r.problems.length > 0 && (
               <Alert severity={m.counted ? 'error' : 'warning'} sx={{ mt: 1 }}>

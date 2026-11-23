@@ -13,6 +13,7 @@ import Typography from '@mui/material/Typography'
 import { api } from '../api/client'
 import GradeTablePreview from '../records/GradeTablePreview'
 import MatchTable from '../records/MatchTable'
+import StudentDocument from '../records/StudentDocument'
 import {
   DEPARTMENT_LANGUAGE_OPTIONS,
   PREP_OPTIONS,
@@ -20,6 +21,7 @@ import {
   statusColor,
   toEditMatch,
   toMatchInput,
+  type DocumentSection,
   type EditMatch,
   type Evaluation,
   type RecordDetail,
@@ -93,6 +95,8 @@ export default function RecordFormPage() {
   const [planId, setPlanId] = useState('')
   const [planCourses, setPlanCourses] = useState<YalovaCourse[]>([])
   const [matches, setMatches] = useState<EditMatch[]>([])
+  // Öğrencinin ders içerik belgesinin bölümleri: sadece bu sayfa açıkken tutulur, kayda gitmez.
+  const [sections, setSections] = useState<DocumentSection[]>([])
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null)
   const [suggested, setSuggested] = useState<(Resolution & { classLevel: number }) | null>(null)
   // Yerleşim kararı: boş = sistemin önerisini kullan; "2-4" = komisyon 2. sınıf 4. dönem dedi.
@@ -330,8 +334,9 @@ export default function RecordFormPage() {
             Henüz ders planı yüklenmemiş. Ayarlar &gt; Ders planları'ndan yükleyin.
           </Alert>
         )}
+        <StudentDocument sections={sections} onChange={setSections} disabled={cancelled} />
         <MatchTable matches={matches} onChange={setMatches} results={evaluation?.matches ?? []}
-          planCourses={planCourses} disabled={cancelled} />
+          planCourses={planCourses} sections={sections} disabled={cancelled} />
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Notlar seçilen PT tablosuyla Yalova notuna çevrilir. Puan iki aralığın arasında kalırsa ya da birleştirilen
           derslerin ortalaması iki harf arasında kalırsa öğrenci lehine üstteki not verilir. İngilizce Yalova dersi

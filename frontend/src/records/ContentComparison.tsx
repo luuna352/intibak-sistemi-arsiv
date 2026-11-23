@@ -4,16 +4,20 @@ import AccordionDetails from '@mui/material/AccordionDetails'
 import AccordionSummary from '@mui/material/AccordionSummary'
 import Box from '@mui/material/Box'
 import Checkbox from '@mui/material/Checkbox'
+import Button from '@mui/material/Button'
 import FormControlLabel from '@mui/material/FormControlLabel'
+import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import ExpandMore from '@mui/icons-material/ExpandMore'
-import { courseKey, lines, type EditMatch, type MatchView } from './records'
+import { courseKey, findSection, lines, type DocumentSection, type EditMatch, type MatchView } from './records'
 
 type Props = {
   match: EditMatch
   // Satırın hesap sonucu (backend): hangi kural ve içerik yüzdesi.
   result: MatchView | undefined
+  // Yüklenen öğrenci içerik belgesinin bölümleri (A3); belge yüklenmediyse boş.
+  sections: DocumentSection[]
   onChange: (change: Partial<EditMatch>) => void
   disabled: boolean
 }
@@ -25,9 +29,11 @@ type Props = {
  * komisyonundur. Ad farklıysa (içerik karşılaştırması gereken satır) bölüm açık gelir; diğerlerinde kapalıdır.
  * Yalova dersi kaldırılırsa konuları da kayda gitmez (sadece seçili derslerin konuları gönderilir).
  */
-export default function ContentComparison({ match, result, onChange, disabled }: Props) {
+export default function ContentComparison({ match, result, sections, onChange, disabled }: Props) {
   // Kullanıcı açıp kapatmadıysa (null) bölüm satırın kuralını izler: içerik karşılaştırması gerekiyorsa açık.
   const [open, setOpen] = useState<boolean | null>(null)
+  // "Belgede bul" sonuç vermeyen karşı derslerin anahtarları (altında "bulunamadı" yazısı çıkar).
+  const [notFound, setNotFound] = useState<number[]>([])
   const yalovaTopics = match.yalova.flatMap((c) => lines(match.yalovaTopics[courseKey(c)]?.text ?? ''))
   const coveredCount = match.yalova.reduce((sum, c) => {
     const t = match.yalovaTopics[courseKey(c)]
@@ -45,6 +51,17 @@ export default function ContentComparison({ match, result, onChange, disabled }:
   const setYalova = (key: string, text: string, covered: string[]) =>
     onChange({ yalovaTopics: { ...match.yalovaTopics, [key]: { text, covered } } })
 
+  // Karşı dersin içerik kutusunu doldurur (elle yazma, belgeden seçme ve "Belgede bul" aynı yolu kullanır).
+  const setIncomingContent = (key: number, content: string) =>
+    onChange({ incoming: match.incoming.map((x) => (x.key === key ? { ...x, content } : x)) })
+
+  // Dersin adıyla belgede bölüm arar; bulursa içerik kutusuna yazar, bulamazsa elle seçim için uyarı bırakır.
+  const findInDocument = (key: number, name: string) => {
+    const found = findSection(sections, name)
+    if (found) setIncomingContent(key, found.content)
+    setNotFound(found ? notFound.filter((k) => k !== key) : [...notFound.filter((k) => k !== key), key])
+  }
+
   return (
     <Accordion expanded={open ?? result?.basis === 'CONTENT'} onChange={(_, v) => setOpen(v)} disableGutters variant="outlined" sx={{ mt: 1 }}>
       <AccordionSummary expandIcon={<ExpandMore />}>
@@ -58,14 +75,38 @@ export default function ContentComparison({ match, result, onChange, disabled }:
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
           <Box>
             {match.incoming.map((c) => (
-              <TextField key={c.key} fullWidth multiline minRows={4} size="small" sx={{ mb: 1 }}
-                label={`Karşı ders: ${c.name || '(adsız)'} · içerik`} value={c.content} disabled={disabled}
-                placeholder="Her satıra bir konu yazın ya da ders içerik belgesinden yapıştırın"
-                onChange={(e) =>
-                  onChange({
-                    incoming: match.incoming.map((x) => (x.key === c.key ? { ...x, content: e.target.value } : x)),
-                  })
-                } />
+              <Box key={c.key} sx={{ mb: 1 }}>
+                <TextField fullWidth multiline minRows={4} size="small"
+                  label={`Karşı ders: ${c.name || '(adsız)'} · içerik`} value={c.content} disabled={disabled}
+                  placeholder="Her satıra bir konu yazın ya da ders içerik belgesinden yapıştırın"
+                  onChange={(e) => setIncomingContent(c.key, e.target.value)} />
+                {/* Belge yüklendiyse: adıyla otomatik bul ya da bölümü listeden elle seç (bölme yanılabilir). */}
+                {sections.length > 0 && (
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Button size="small" variant="outlined" disabled={disabled || c.name.trim() === ''}
+                      onClick={() => findInDocument(c.key, c.name)}>
+                      Belgede bul
+                    </Button>
+                    <TextField select size="small" label="Belgeden bölüm seç" value="" disabled={disabled}
+                      sx={{ minWidth: 220, flex: 1 }}
+                      onChange={(e) => {
+                        setIncomingContent(c.key, sections[Number(e.target.value)].content)
+                        setNotFound(notFound.filter((k) => k !== c.key))
+                      }}>
+                      {sections.map((s, i) => (
+                        <MenuItem key={i} value={String(i)} disabled={s.content === ''}>
+                          {s.heading} ({lines(s.content).length} satır)
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                    {notFound.includes(c.key) && (
+                      <Typography variant="caption" color="warning.main">
+                        Belgede bu adla başlık bulunamadı; bölümü listeden seçin.
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+              </Box>
             ))}
           </Box>
           <Box>

@@ -150,6 +150,35 @@ export const lines = (text: string) =>
     .map((x) => x.trim())
     .filter((x) => x !== '')
 
+// Öğrencinin ders içerik belgesinin bir bölümü (backend: ContentDocument.Section). Belge sunucuda saklanmaz;
+// bölümler sadece bu formun hafızasında durur, seçilen bölüm karşı dersin içerik kutusuna kopyalanır.
+export type DocumentSection = { heading: string; code: string | null; content: string }
+
+// Ad karşılaştırması için sadeleştirme: Türkçe küçük harf, harf/rakam dışı her şey boşluk, fazla boşluk tek.
+// ı -> i: Türkçe küçültmede "II" "ıı" olur ama elle yazılan "ii" öyle kalır; ikisi aynı sayılsın.
+const plainName = (s: string) =>
+  s
+    .toLocaleLowerCase('tr')
+    .replace(/ı/g, 'i')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+
+/**
+ * Karşı dersin adını belgede arar: başlığında dersin adı geçen bölümler aday olur, en çok satırı olan seçilir
+ * (başta içindekiler listesi varsa oradaki boş bölüm değil, asıl bölüm gelsin). Bulunamazsa null; o zaman
+ * komisyon bölümü listeden elle seçer.
+ */
+export function findSection(sections: DocumentSection[], courseName: string): DocumentSection | null {
+  const name = plainName(courseName)
+  if (name === '') return null
+  let best: DocumentSection | null = null
+  for (const s of sections) {
+    if (s.content === '' || !` ${plainName(s.heading)} `.includes(` ${name} `)) continue
+    if (!best || lines(s.content).length > lines(best.content).length) best = s
+  }
+  return best
+}
+
 let nextKey = 1
 export const newKey = () => nextKey++
 

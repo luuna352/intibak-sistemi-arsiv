@@ -61,10 +61,14 @@ sayılamaz (eksik bilgi). "Sayıldı mı?" kutusu satırı silmeden sayımdan ç
 - **A1 (yapıldı):** kurallar 1-5 öneri olarak (V9: hazırlık ve bölüm dili; V10: her dersin konuları, Yalova
   konularında "karşılanıyor" işareti). Formda içerik karşılaştırma bölümü; konular şimdilik elle yazılır ya da
   yapıştırılır.
-- **A2:** Yalova ders içerikleri: plan başına konular, Ayarlar > Ders planları'nda düzenleme ve belge yükleme; formda
-  Yalova dersi seçilince konuları kendiliğinden gelir.
-- **A3:** öğrencinin ders içerik belgesi: kayda PDF/DOCX yükleme, "Belgede bul" ile karşı dersin bölümünü getirme.
-  Taranmış (resim) PDF okunmaz, içerik elle yapıştırılır.
+- **A2 (yapıldı):** Yalova ders içerikleri plan başına (V11, `plan_course.content`, her satır bir konu). Ayarlar >
+  Ders planları'nda elle düzenleme ve PDF/DOCX belge yükleme: belge ders kodlarına göre bölünür (kodla başlayan satır
+  ya da "Dersin Kodu:" etiketi), önizlemede seçilenler tabloya alınır, "Kaydet" ile kalıcı olur. Excel tekrar
+  yüklenince içerikler kod + ada göre korunur. Formda Yalova dersi seçilince konuları kendiliğinden gelir.
+- **A3 (yapıldı):** öğrencinin ders içerik belgesi: formda PDF/DOCX yükleme; belge saklanmaz, bölümleri sadece sayfa
+  açıkken durur. İçerik karşılaştırmasında "Belgede bul" (dersin adı bölüm başlığında aranır) ya da listeden bölüm
+  seçme; seçilen bölüm karşı dersin içerik kutusuna kopyalanır, kayda sadece o gider. Taranmış (resim) PDF ve eski
+  .doc okunmaz; içerik elle yapıştırılır. Yapay zekâ/internet kullanılmaz (KVKK).
 
 ## Teyit edilecekler
 
