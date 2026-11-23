@@ -9,7 +9,6 @@ import LoginPage from './pages/LoginPage'
 import PlansPage from './pages/PlansPage'
 import RecordFormPage from './pages/RecordFormPage'
 import RecordsPage from './pages/RecordsPage'
-import RecordStatusPage from './pages/RecordStatusPage'
 import UsersPage from './pages/UsersPage'
 import { ActiveYearProvider } from './settings/ActiveYearProvider'
 
@@ -39,7 +38,6 @@ export default function App() {
           <Route path="/ayarlar/ders-planlari" element={<PlansPage />} />
           <Route path="/ayarlar/not-tablolari" element={<GradeTablesPage />} />
           <Route path="/ayarlar/aktif-yil" element={<ActiveYearPage />} />
-          <Route path="/kayit-durumlari" element={<RecordStatusPage />} />
           <Route path="*" element={<Navigate to="/kayitlar" replace />} />
         </Routes>
       </Layout>

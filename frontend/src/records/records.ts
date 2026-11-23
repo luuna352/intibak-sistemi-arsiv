@@ -59,6 +59,17 @@ export const statusColor: Record<RecordStatus, 'info' | 'warning' | 'default' | 
   WORDE_AKTARILDI: 'success',
 }
 
+// Her durumun anlamı (kayıt hangi işlemle o duruma geçer). Listede durum etiketinin üzerine gelince görünür.
+export const statusMeaning: Record<RecordStatus, string> = {
+  OLUSTURULUYOR: 'Kayıt yeni açıldı, henüz değiştirilmedi.',
+  DEGISTIRILIYOR: 'Kayıt açıldıktan sonra en az bir kez değiştirildi (Word\'e aktarıldıktan sonra değişirse de bu duruma döner).',
+  IPTAL: 'Kayıt iptal edildi; listede gizli, silinmedi. "İptali geri al" ile önceki durumuna döner.',
+  WORDE_AKTARILDI: 'İntibak formu Word belgesi olarak alındı (Word çıktısı 7 Aralık aşamasında eklenecek).',
+}
+
+// Backend /api/records/status-counts: her durumda kaç kayıt var (bütün kayıtlar, aramadan bağımsız).
+export type StatusCount = { status: RecordStatus; label: string; count: number }
+
 /** "2026-11-21T10:00:00Z" -> "21.11.2026" (boşsa boş metin). */
 export const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('tr-TR') : '')
 

@@ -18,10 +18,18 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import TableSortLabel from '@mui/material/TableSortLabel'
 import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { api } from '../api/client'
 import { useActiveYear } from '../settings/activeYear'
-import { formatDate, statusColor, type RecordListItem } from '../records/records'
+import {
+  formatDate,
+  statusColor,
+  statusMeaning,
+  type RecordListItem,
+  type RecordStatus,
+  type StatusCount,
+} from '../records/records'
 
 // Sıralanabilir sütunlar: başlık metni ve satırdaki alan.
 type SortKey = 'tcMasked' | 'fullName' | 'transferTypeLabel' | 'university' | 'createdByName' | 'createdAt'
@@ -51,14 +59,26 @@ export default function RecordsPage() {
   const [toCancel, setToCancel] = useState<RecordListItem | null>(null)
   // Listeyi yeniden yükletmek için sayaç: iptal/geri al sonrası artırılır, effect tekrar çalışır.
   const [reload, setReload] = useState(0)
+  // Durum sayıları (listenin üstündeki düğmeler) ve seçili durum filtresi (null = hepsi).
+  const [counts, setCounts] = useState<StatusCount[]>([])
+  const [statusFilter, setStatusFilter] = useState<RecordStatus | null>(null)
+  // İptal durumu seçilince iptal edilenler de istenir (normalde listede gizli).
+  const includeCancelled = showCancelled || statusFilter === 'IPTAL'
 
-  // Arama kutusu ya da "iptal edilenleri göster" değişince liste backend'den yeniden istenir.
+  // Arama kutusu, "iptal edilenleri göster" ya da filtre değişince liste backend'den yeniden istenir.
   useEffect(() => {
-    const params = new URLSearchParams({ q: query, includeCancelled: String(showCancelled) })
+    const params = new URLSearchParams({ q: query, includeCancelled: String(includeCancelled) })
     api<RecordListItem[]>(`/api/records?${params}`)
       .then(setRecords)
       .catch((e: Error) => setMessage({ type: 'error', text: e.message }))
-  }, [query, showCancelled, reload])
+  }, [query, includeCancelled, reload])
+
+  // Sayılar da iptal/geri al sonrası yenilenir (bir kayıt durum değiştirmiş olur).
+  useEffect(() => {
+    api<StatusCount[]>('/api/records/status-counts')
+      .then(setCounts)
+      .catch((e: Error) => setMessage({ type: 'error', text: e.message }))
+  }, [reload])
 
   function sortBy(key: SortKey) {
     // Aynı başlığa tekrar tıklanınca yön değişir (A-Z <-> Z-A).
@@ -66,7 +86,7 @@ export default function RecordsPage() {
   }
 
   // Türkçe alfabeye göre karşılaştırma (Ç, Ğ, İ, Ö, Ş, Ü doğru yerde); boş değerler sona.
-  const sorted = [...records].sort((a, b) => {
+  const sorted = records.filter((r) => statusFilter === null || r.status === statusFilter).sort((a, b) => {
     const x = a[sort.key] ?? ''
     const y = b[sort.key] ?? ''
     if (x === '' || y === '') return x === y ? 0 : x === '' ? 1 : -1
@@ -112,6 +132,22 @@ export default function RecordsPage() {
         />
       </Box>
 
+      {/* Durum düğmeleri: tıklanınca liste o duruma süzülür, tekrar tıklanınca (ya da "Hepsi") süzme kalkar.
+          Üzerine gelince durumun anlamı görünür. Sayılar bütün kayıtlardır (aramadan bağımsız). */}
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
+        <Chip label="Hepsi" variant={statusFilter === null ? 'filled' : 'outlined'} onClick={() => setStatusFilter(null)} />
+        {counts.map((c) => (
+          <Tooltip key={c.status} title={statusMeaning[c.status]}>
+            <Chip
+              label={`${c.label} (${c.count})`}
+              color={statusColor[c.status]}
+              variant={statusFilter === c.status ? 'filled' : 'outlined'}
+              onClick={() => setStatusFilter(statusFilter === c.status ? null : c.status)}
+            />
+          </Tooltip>
+        ))}
+      </Box>
+
       {message && (
         <Alert severity={message.type} sx={{ mb: 2 }} onClose={() => setMessage(null)}>
           {message.text}
@@ -153,7 +189,9 @@ export default function RecordsPage() {
                 <TableCell>{r.updatedByName}</TableCell>
                 <TableCell>{formatDate(r.updatedAt)}</TableCell>
                 <TableCell>
-                  <Chip size="small" label={r.statusLabel} color={statusColor[r.status]} />
+                  <Tooltip title={statusMeaning[r.status]}>
+                    <Chip size="small" label={r.statusLabel} color={statusColor[r.status]} />
+                  </Tooltip>
                 </TableCell>
                 <TableCell>
                   {r.status === 'IPTAL' ? (
@@ -171,7 +209,7 @@ export default function RecordsPage() {
             {sorted.length === 0 && (
               <TableRow>
                 <TableCell colSpan={COLUMNS.length + 1} sx={{ color: 'text.secondary' }}>
-                  {query ? 'Aramaya uyan kayıt yok.' : 'Henüz kayıt yok. "+ Yeni kayıt" ile ekleyin.'}
+                  {query || statusFilter ? 'Aramaya/filtreye uyan kayıt yok.' : 'Henüz kayıt yok. "+ Yeni kayıt" ile ekleyin.'}
                 </TableCell>
               </TableRow>
             )}
@@ -179,7 +217,8 @@ export default function RecordsPage() {
         </Table>
       </Paper>
       <Typography variant="body2" color="text.secondary">
-        Sütun başlığına tıkla: sırala · Satıra çift tıkla: kaydı aç. "Kaydı açan" ve "Son değiştiren" işlemi yapanın o
+        Sütun başlığına tıkla: sırala · Satıra çift tıkla: kaydı aç · Durum düğmesine tıkla: o durumdaki kayıtlar
+        (üzerine gelince durumun anlamı görünür). "Kaydı açan" ve "Son değiştiren" işlemi yapanın o
         andaki adıdır; sonradan rolün adı değişse de eski kayıtlar değişmez. Kayıt silinmez: "İptal et" listeden gizler,
         "İptali geri al" geri getirir.
       </Typography>

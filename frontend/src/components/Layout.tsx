@@ -76,7 +76,6 @@ export default function Layout({ children }: { children: ReactNode }) {
                 {settingsOpen ? <ExpandLess /> : <ExpandMore />}
               </ListItemButton>
               <Collapse in={settingsOpen}>{settings.map((s) => item(s.to, s.label, true))}</Collapse>
-              {item('/kayit-durumlari', 'Kayıt durumları')}
               <ListItemButton onClick={logout}>
                 <ListItemText primary="Çıkış yap" slotProps={{ primary: { sx: { fontWeight: 700, color: 'error.main' } } }} />
               </ListItemButton>
