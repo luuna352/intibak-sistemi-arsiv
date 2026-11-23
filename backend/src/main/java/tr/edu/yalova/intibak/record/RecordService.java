@@ -33,6 +33,9 @@ public class RecordService {
 
     private static final Locale TR = Locale.forLanguageTag("tr");
     private static final BigDecimal MAX_NUMBER = new BigDecimal("999.9");
+    // Bir dersin en fazla konu sayısı ve bir konunun en fazla uzunluğu (V10'daki VARCHAR(500)).
+    private static final int MAX_TOPICS = 100;
+    private static final int MAX_TOPIC_LENGTH = 500;
 
     private final IntibakRecordRepository repository;
     private final GradeTableRepository gradeTables;
@@ -55,19 +58,27 @@ public class RecordService {
             String updatedByName, Instant updatedAt, RecordStatus status, String statusLabel) {
     }
 
-    /** Eşleştirmedeki bir ders. convertedGrade: karşı kurum notunun Yalova karşılığı (Yalova dersinde boş). */
+    /** Dersin bir konusu (kural 5). covered: Yalova konusu karşı derste karşılanıyor mu (komisyon işaretler). */
+    public record TopicView(String text, boolean covered) {
+    }
+
+    /**
+     * Eşleştirmedeki bir ders. convertedGrade: karşı kurum notunun Yalova karşılığı (Yalova dersinde boş). topics:
+     * dersin içeriği, konu konu.
+     */
     public record CourseView(String code, String name, BigDecimal credit, BigDecimal ects, CourseLanguage language,
-            String grade, YalovaGrade convertedGrade) {
+            String grade, YalovaGrade convertedGrade, List<TopicView> topics) {
     }
 
     /**
      * Eşleştirme satırı ve hesap sonucu: birleşik not, Yalova kredisi, eksik bilgiler (problems: satır sayılamaz),
      * kural önerileri (warnings: komisyon yine de sayabilir), sistemin "sayılsın mı" önerisi ve satırın hangi
-     * kuralla değerlendirildiği (basis: Türk Dili / tarih, aynı ad ya da içerik karşılaştırması).
+     * kuralla değerlendirildiği (basis: Türk Dili / tarih, aynı ad ya da içerik karşılaştırması) ve içerik
+     * örtüşme yüzdesi (contentPercent: Yalova konusu girilmemişse boş; eşik yok, kararı komisyon verir).
      */
     public record MatchView(boolean counted, List<CourseView> incoming, List<CourseView> yalova, YalovaGrade grade,
             BigDecimal yalovaCredit, List<String> problems, List<String> warnings, boolean suggestCounted,
-            MatchBasis basis, String basisLabel) {
+            MatchBasis basis, String basisLabel, Integer contentPercent) {
     }
 
     /** Formun hesap kısmı: satırların sonucu ve yerleşim (sayılan kredi, sınıf, dönem, gerekçe). */
@@ -82,9 +93,12 @@ public class RecordService {
             Integer placementSemester) {
     }
 
-    /** Formdan gelen ders. grade sadece karşı kurum dersinde dolu olur. */
+    public record TopicInput(String text, Boolean covered) {
+    }
+
+    /** Formdan gelen ders. grade sadece karşı kurum dersinde dolu olur; topics: dersin içeriği, konu konu. */
     public record CourseInput(String code, String name, BigDecimal credit, BigDecimal ects, CourseLanguage language,
-            String grade) {
+            String grade, List<TopicInput> topics) {
     }
 
     public record MatchInput(Boolean counted, List<CourseInput> incoming, List<CourseInput> yalova) {
@@ -297,8 +311,34 @@ public class RecordService {
         checkNumber(c.credit(), prefix + name + " kredisi");
         checkNumber(c.ects(), prefix + name + " AKTS'si");
         String grade = side == MatchSide.INCOMING ? text(c.grade(), 10, prefix + name + " notu") : null;
-        return new IntibakMatchCourse(position, side, text(c.code(), 20, prefix + "ders kodu"), name, c.credit(),
-                c.ects(), c.language() == null ? CourseLanguage.TR : c.language(), grade);
+        IntibakMatchCourse course = new IntibakMatchCourse(position, side, text(c.code(), 20, prefix + "ders kodu"),
+                name, c.credit(), c.ects(), c.language() == null ? CourseLanguage.TR : c.language(), grade);
+        List<MatchCalculator.Topic> topics = topics(c, side);
+        if (topics.size() > MAX_TOPICS) {
+            throw new BadRequestException(prefix + name + ": en fazla " + MAX_TOPICS + " konu girilebilir.");
+        }
+        List<IntibakMatchTopic> entities = new ArrayList<>();
+        for (MatchCalculator.Topic t : topics) {
+            if (t.text().length() > MAX_TOPIC_LENGTH) {
+                throw new BadRequestException(prefix + name + ": bir konu en fazla " + MAX_TOPIC_LENGTH
+                        + " karakter olabilir.");
+            }
+            entities.add(new IntibakMatchTopic(entities.size(), t.text(), t.covered()));
+        }
+        course.replaceTopics(entities);
+        return course;
+    }
+
+    /**
+     * Formdan gelen konular: metinler kırpılır, boş satırlar atlanır. "Karşılanıyor" işareti sadece Yalova
+     * konularında anlamlıdır (karşı dersin konusunda her zaman false).
+     */
+    private static List<MatchCalculator.Topic> topics(CourseInput c, MatchSide side) {
+        return (c.topics() == null ? List.<TopicInput>of() : c.topics()).stream()
+                .filter(t -> t != null && t.text() != null && !t.text().isBlank())
+                .map(t -> new MatchCalculator.Topic(t.text().trim(),
+                        side == MatchSide.YALOVA && Boolean.TRUE.equals(t.covered())))
+                .toList();
     }
 
     /**
@@ -326,21 +366,23 @@ public class RecordService {
 
     // Önizlemede yarım satırlar hata vermez: adı boş dersler yok sayılır.
     private static MatchCalculator.MatchIn lenient(MatchInput m) {
-        return new MatchCalculator.MatchIn(Boolean.TRUE.equals(m.counted()), named(m.incoming()), named(m.yalova()));
+        return new MatchCalculator.MatchIn(Boolean.TRUE.equals(m.counted()), named(m.incoming(), MatchSide.INCOMING),
+                named(m.yalova(), MatchSide.YALOVA));
     }
 
-    private static List<MatchCalculator.CourseIn> named(List<CourseInput> courses) {
+    private static List<MatchCalculator.CourseIn> named(List<CourseInput> courses, MatchSide side) {
         return (courses == null ? List.<CourseInput>of() : courses).stream()
                 .filter(c -> c.name() != null && !c.name().isBlank())
                 .map(c -> new MatchCalculator.CourseIn(c.code(), c.name().trim(), c.credit(), c.ects(),
-                        c.language() == null ? CourseLanguage.TR : c.language(), c.grade()))
+                        c.language() == null ? CourseLanguage.TR : c.language(), c.grade(), topics(c, side)))
                 .toList();
     }
 
     private static List<MatchCalculator.CourseIn> toCalc(List<IntibakMatchCourse> courses, MatchSide side) {
         return courses.stream().filter(c -> c.getSide() == side)
                 .map(c -> new MatchCalculator.CourseIn(c.getCode(), c.getName(), c.getCredit(), c.getEcts(),
-                        c.getLanguage(), c.getGrade()))
+                        c.getLanguage(), c.getGrade(), c.getTopics().stream()
+                                .map(t -> new MatchCalculator.Topic(t.getText(), t.isCovered())).toList()))
                 .toList();
     }
 
@@ -363,13 +405,15 @@ public class RecordService {
             }
             List<CourseView> yalova = in.yalova().stream().map(c -> view(c, null)).toList();
             views.add(new MatchView(in.counted(), incoming, yalova, r.grade(), r.yalovaCredit(), r.problems(),
-                    r.warnings(), r.suggestCounted(), r.basis(), r.basis() == null ? null : r.basis().label()));
+                    r.warnings(), r.suggestCounted(), r.basis(), r.basis() == null ? null : r.basis().label(),
+                    r.contentPercent()));
         }
         return new Evaluation(views, result.placement());
     }
 
     private static CourseView view(MatchCalculator.CourseIn c, YalovaGrade converted) {
-        return new CourseView(c.code(), c.name(), c.credit(), c.ects(), c.language(), c.grade(), converted);
+        return new CourseView(c.code(), c.name(), c.credit(), c.ects(), c.language(), c.grade(), converted,
+                c.topics().stream().map(t -> new TopicView(t.text(), t.covered())).toList());
     }
 
     private static String text(String value, int max, String field) {

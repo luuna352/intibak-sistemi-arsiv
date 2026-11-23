@@ -149,12 +149,13 @@ class RecordServiceTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         RecordService.MatchInput match = new RecordService.MatchInput(true,
                 List.of(new RecordService.CourseInput(null, "Programlama", new BigDecimal("4"), null,
-                        CourseLanguage.EN, "95")),
+                        CourseLanguage.EN, "95", null)),
                 List.of(new RecordService.CourseInput("BSM151", "Algorithms and Programming 1",
-                        new BigDecimal("31"), new BigDecimal("7"), CourseLanguage.EN, null)));
+                        new BigDecimal("31"), new BigDecimal("7"), CourseLanguage.EN, null, null)));
 
         RecordService.Detail saved = service.create(new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY,
-                null, null, null, PrepStatus.PASSED, DepartmentLanguage.TR, 1L, null, List.of(match), null, null, true), "Üye 1");
+                null, null, null, PrepStatus.PASSED, DepartmentLanguage.TR, 1L, null,
+                List.of(match), null, null, true), "Üye 1");
 
         RecordService.MatchView view = saved.evaluation().matches().get(0);
         assertThat(view.incoming().get(0).convertedGrade()).isEqualTo(YalovaGrade.AA);
@@ -163,21 +164,44 @@ class RecordServiceTest {
 
         // Dil farkı (Türkçe ders -> İngilizce Yalova dersi) sadece öneridir: komisyon sayarsa kayıt yapılır, uyarı durur.
         RecordService.MatchInput turkish = new RecordService.MatchInput(true,
-                List.of(new RecordService.CourseInput(null, "Programlama", null, null, CourseLanguage.TR, "95")),
+                List.of(new RecordService.CourseInput(null, "Programlama", null, null, CourseLanguage.TR, "95", null)),
                 match.yalova());
         RecordService.MatchView warned = service.create(new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY,
-                null, null, null, PrepStatus.PASSED, DepartmentLanguage.TR, 1L, null, List.of(turkish), null, null, true), "x").evaluation().matches().get(0);
+                null, null, null, PrepStatus.PASSED, DepartmentLanguage.TR, 1L, null,
+                List.of(turkish), null, null, true), "x").evaluation().matches().get(0);
         assertThat(warned.counted()).isTrue();
         assertThat(warned.suggestCounted()).isFalse();
         assertThat(warned.warnings()).anyMatch(w -> w.contains("Eğitim dili farklı"));
 
         // Eksik bilgi (not yok) ise "sayıldı" işaretli satır kaydedilemez.
         RecordService.MatchInput noGrade = new RecordService.MatchInput(true,
-                List.of(new RecordService.CourseInput(null, "Programlama", null, null, CourseLanguage.EN, "")),
+                List.of(new RecordService.CourseInput(null, "Programlama", null, null, CourseLanguage.EN, "", null)),
                 match.yalova());
         assertThatThrownBy(() -> service.create(new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY,
-                null, null, null, PrepStatus.PASSED, DepartmentLanguage.TR, 1L, null, List.of(noGrade), null, null, true), "x"))
+                null, null, null, PrepStatus.PASSED, DepartmentLanguage.TR, 1L, null,
+                List.of(noGrade), null, null, true), "x"))
                 .hasMessageContaining("1. satır sayılamaz");
+    }
+
+    @Test
+    void savesTopicsAndComputesContentPercent() {
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        // Karşı dersin konusundaki "karşılanıyor" işareti anlamsızdır, kaydedilmez; boş satırlar atlanır.
+        RecordService.MatchInput match = new RecordService.MatchInput(false,
+                List.of(new RecordService.CourseInput(null, "Data Structures", null, null, CourseLanguage.EN, "AA",
+                        List.of(new RecordService.TopicInput(" Arrays ", true), new RecordService.TopicInput(" ", null)))),
+                List.of(new RecordService.CourseInput("BSM201", "Veri Yapıları", null, null, CourseLanguage.TR, null,
+                        List.of(new RecordService.TopicInput("Diziler", true),
+                                new RecordService.TopicInput("Ağaçlar", false)))));
+
+        RecordService.MatchView view = service.create(new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY,
+                null, null, null, null, null, null, null, List.of(match), null, null, true), "x")
+                .evaluation().matches().get(0);
+
+        assertThat(view.incoming().get(0).topics()).containsExactly(new RecordService.TopicView("Arrays", false));
+        assertThat(view.yalova().get(0).topics()).hasSize(2);
+        assertThat(view.contentPercent()).isEqualTo(50);
+        assertThat(view.basis()).isEqualTo(MatchBasis.CONTENT);
     }
 
     @Test

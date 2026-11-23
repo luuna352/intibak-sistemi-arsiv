@@ -1,7 +1,10 @@
 package tr.edu.yalova.intibak.record;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,6 +15,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 
 import tr.edu.yalova.intibak.curriculum.CourseLanguage;
@@ -55,6 +60,11 @@ public class IntibakMatchCourse {
     @Column(length = 10)
     private String grade;
 
+    // Kural 5: dersin içeriği, konu konu (V10). Dersle birlikte kaydedilir, listeden çıkan konu silinir.
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("position")
+    private List<IntibakMatchTopic> topics = new ArrayList<>();
+
     protected IntibakMatchCourse() {
     }
 
@@ -72,6 +82,19 @@ public class IntibakMatchCourse {
 
     void attachTo(IntibakMatch match) {
         this.match = match;
+    }
+
+    /** Konuları ekrandaki haliyle değiştirir. */
+    public void replaceTopics(List<IntibakMatchTopic> newTopics) {
+        topics.clear();
+        for (IntibakMatchTopic topic : newTopics) {
+            topic.attachTo(this);
+            topics.add(topic);
+        }
+    }
+
+    public List<IntibakMatchTopic> getTopics() {
+        return topics;
     }
 
     public MatchSide getSide() {

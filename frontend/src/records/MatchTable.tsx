@@ -11,6 +11,7 @@ import Paper from '@mui/material/Paper'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
+import ContentComparison from './ContentComparison'
 import {
   emptyIncoming,
   emptyMatch,
@@ -143,6 +144,8 @@ export default function MatchTable({ matches, onChange, results, planCourses, di
                 />
               </Box>
             </Box>
+
+            <ContentComparison match={m} result={r} disabled={disabled} onChange={(change) => update(m.key, change)} />
 
             {r && r.problems.length > 0 && (
               <Alert severity={m.counted ? 'error' : 'warning'} sx={{ mt: 1 }}>

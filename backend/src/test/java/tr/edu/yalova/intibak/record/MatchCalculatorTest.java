@@ -174,6 +174,26 @@ class MatchCalculatorTest {
     }
 
     @Test
+    void contentPercentIsCoveredYalovaTopicsOverAll() {
+        MatchCalculator.CourseIn yalovaWithTopics = new MatchCalculator.CourseIn("BSM201", "Veri Yapıları",
+                new BigDecimal("4"), null, CourseLanguage.TR, null, List.of(
+                        new MatchCalculator.Topic("Diziler", true),
+                        new MatchCalculator.Topic("Bağlı listeler", true),
+                        new MatchCalculator.Topic("Ağaçlar", false)));
+        MatchCalculator.MatchIn match = new MatchCalculator.MatchIn(true, List.of(named("Data Structures")),
+                List.of(yalovaWithTopics));
+
+        // 2 / 3 = %66.7 -> 67. Yüzde öneriyi değiştirmez (eşik yok, kararı komisyon verir).
+        MatchCalculator.MatchResult result = MatchCalculator.evaluate(match, ROWS, PASSED, TR);
+        assertThat(result.contentPercent()).isEqualTo(67);
+        assertThat(result.basis()).isEqualTo(MatchBasis.CONTENT);
+        assertThat(result.suggestCounted()).isTrue();
+        // Yalova konusu girilmemişse yüzde yok.
+        assertThat(MatchCalculator.contentPercent(new MatchCalculator.MatchIn(true, List.of(named("X")),
+                List.of(named("Y"))))).isNull();
+    }
+
+    @Test
     void placementThresholds() {
         assertThat(MatchCalculator.place(new BigDecimal("29.5"), TransferType.YATAY).classLevel()).isEqualTo(1);
         assertThat(MatchCalculator.place(new BigDecimal("30"), TransferType.YATAY).semester()).isEqualTo(3);

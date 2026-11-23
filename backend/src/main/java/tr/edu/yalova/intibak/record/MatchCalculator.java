@@ -43,9 +43,22 @@ final class MatchCalculator {
     private MatchCalculator() {
     }
 
-    /** Hesaba giren ders (karşı kurum ya da Yalova). Yalova dersinde grade boştur. */
+    /**
+     * Hesaba giren ders (karşı kurum ya da Yalova). Yalova dersinde grade boştur. topics: dersin içeriği, konu konu
+     * (kural 5); covered sadece Yalova konularında anlamlıdır.
+     */
     record CourseIn(String code, String name, BigDecimal credit, BigDecimal ects, CourseLanguage language,
-            String grade) {
+            String grade, List<Topic> topics) {
+
+        /** İçeriği girilmemiş ders (testlerde ve içerik gerekmeyen yerlerde kısa yol). */
+        CourseIn(String code, String name, BigDecimal credit, BigDecimal ects, CourseLanguage language,
+                String grade) {
+            this(code, name, credit, ects, language, grade, List.of());
+        }
+    }
+
+    /** Dersin bir konusu; covered = komisyon "bu Yalova konusu karşı derste karşılanıyor" dedi. */
+    record Topic(String text, boolean covered) {
     }
 
     record MatchIn(boolean counted, List<CourseIn> incoming, List<CourseIn> yalova) {
@@ -57,7 +70,7 @@ final class MatchCalculator {
      * (warnings: sistem "sayılmaz" önerir, karar komisyonun).
      */
     record MatchResult(List<YalovaGrade> incomingGrades, YalovaGrade grade, BigDecimal yalovaCredit,
-            List<String> problems, List<String> warnings, MatchBasis basis) {
+            List<String> problems, List<String> warnings, MatchBasis basis, Integer contentPercent) {
 
         /** Sistemin önerisi: eksik bilgi ve kural uyarısı yoksa "sayılsın". */
         boolean suggestCounted() {
@@ -142,7 +155,21 @@ final class MatchCalculator {
         BigDecimal yalovaCredit = match.yalova().stream()
                 .map(CourseIn::credit).filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new MatchResult(grades, grade, yalovaCredit, problems, warnings, basis(match));
+        return new MatchResult(grades, grade, yalovaCredit, problems, warnings, basis(match), contentPercent(match));
+    }
+
+    /**
+     * Kural 5: içerik örtüşme yüzdesi = karşılanan Yalova konusu / toplam Yalova konusu (satırdaki bütün Yalova
+     * dersleri birlikte), en yakın tam sayıya yuvarlanır. Yalova konusu girilmemişse null. Sabit eşik yok: yüzde
+     * sadece gösterilir, "sayılsın mı" önerisini değiştirmez; kararı komisyon verir.
+     */
+    static Integer contentPercent(MatchIn match) {
+        List<Topic> topics = match.yalova().stream().flatMap(c -> c.topics().stream()).toList();
+        if (topics.isEmpty()) {
+            return null;
+        }
+        long covered = topics.stream().filter(Topic::covered).count();
+        return (int) Math.round(covered * 100.0 / topics.size());
     }
 
     /**

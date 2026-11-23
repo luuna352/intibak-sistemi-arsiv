@@ -58,8 +58,9 @@ sayılamaz (eksik bilgi). "Sayıldı mı?" kutusu satırı silmeden sayımdan ç
 
 ## Uygulama planı (dal: `feature/icerik-karsilastirma`)
 
-- **A1:** kurallar 1-5 ve formda içerik karşılaştırma bölümü (V8: her dersin konuları, Yalova konularında
-  "karşılanıyor" işareti).
+- **A1 (yapıldı):** kurallar 1-5 öneri olarak (V9: hazırlık ve bölüm dili; V10: her dersin konuları, Yalova
+  konularında "karşılanıyor" işareti). Formda içerik karşılaştırma bölümü; konular şimdilik elle yazılır ya da
+  yapıştırılır.
 - **A2:** Yalova ders içerikleri: plan başına konular, Ayarlar > Ders planları'nda düzenleme ve belge yükleme; formda
   Yalova dersi seçilince konuları kendiliğinden gelir.
 - **A3:** öğrencinin ders içerik belgesi: kayda PDF/DOCX yükleme, "Belgede bul" ile karşı dersin bölümünü getirme.

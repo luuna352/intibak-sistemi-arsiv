@@ -74,6 +74,8 @@ export type CourseView = {
   language: Language
   grade: string | null
   convertedGrade: string | null
+  // Dersin içeriği, konu konu (kural 5). covered: Yalova konusu karşı derste karşılanıyor mu.
+  topics: { text: string; covered: boolean }[]
 }
 
 export type MatchView = {
@@ -91,6 +93,8 @@ export type MatchView = {
   // Hangi kural: Türk Dili / tarih ve aynı ad doğrudan kabul, ad farklıysa içerik karşılaştırması (kural 3-5).
   basis: 'COMMON_COURSE' | 'SAME_NAME' | 'CONTENT' | null
   basisLabel: string | null
+  // İçerik örtüşme yüzdesi: karşılanan / toplam Yalova konusu (konu girilmemişse null). Eşik yok.
+  contentPercent: number | null
 }
 
 export type Placement = { countedCredit: number; classLevel: number; semester: number; reason: string }
@@ -98,25 +102,58 @@ export type Placement = { countedCredit: number; classLevel: number; semester: n
 export type Evaluation = { matches: MatchView[]; placement: Placement }
 
 // Ekranda düzenlenen karşı kurum dersi: kutular metin tutar. key: React'in satırları ayırt etmesi için sabit numara.
-export type EditIncoming = { key: number; name: string; credit: string; ects: string; grade: string; language: Language }
+// content: dersin içeriği, her satır bir konu.
+export type EditIncoming = {
+  key: number
+  name: string
+  credit: string
+  ects: string
+  grade: string
+  language: Language
+  content: string
+}
 
 // Plandan seçilen Yalova dersi (kayda metin olarak kopyalanır).
 export type YalovaCourse = { code: string | null; name: string; credit: number | null; ects: number | null; language: Language }
 
+// Bir Yalova dersinin konuları: text = her satır bir konu (kutuda yazıldığı gibi), covered = karşılanıyor
+// işaretli konuların metinleri. Metin ayrı tutulur ki yazarken boş satır (yeni konu) kaybolmasın.
+export type YalovaTopics = { text: string; covered: string[] }
+
 // countedTouched: komisyon "Sayıldı mı?" kutusuna kendisi dokundu mu? Dokunmadıysa kutu sistemin önerisini izler;
-// dokunduysa (ya da kayıt açıldıysa) komisyonun kararı korunur.
+// dokunduysa (ya da kayıt açıldıysa) komisyonun kararı korunur. yalovaTopics: Yalova derslerinin konuları
+// (anahtar: courseKey).
 export type EditMatch = {
   key: number
   counted: boolean
   countedTouched: boolean
   incoming: EditIncoming[]
   yalova: YalovaCourse[]
+  yalovaTopics: Record<string, YalovaTopics>
 }
+
+/** Yalova dersini tanıyan anahtar (kodu olmayan dersler de var; kod + ad birlikte). */
+export const courseKey = (c: YalovaCourse) => `${c.code ?? ''}|${c.name}`
+
+/** Kutudaki metni konulara böler: her satır bir konu, boş satırlar atlanır. */
+export const lines = (text: string) =>
+  text
+    .split('\n')
+    .map((x) => x.trim())
+    .filter((x) => x !== '')
 
 let nextKey = 1
 export const newKey = () => nextKey++
 
-export const emptyIncoming = (): EditIncoming => ({ key: newKey(), name: '', credit: '', ects: '', grade: '', language: 'TR' })
+export const emptyIncoming = (): EditIncoming => ({
+  key: newKey(),
+  name: '',
+  credit: '',
+  ects: '',
+  grade: '',
+  language: 'TR',
+  content: '',
+})
 
 export const emptyMatch = (): EditMatch => ({
   key: newKey(),
@@ -124,6 +161,7 @@ export const emptyMatch = (): EditMatch => ({
   countedTouched: false,
   incoming: [emptyIncoming()],
   yalova: [],
+  yalovaTopics: {},
 })
 
 // "3,5" gibi Türkçe virgüllü yazımı da kabul eder; boş kutu = değer yok (null).
@@ -143,8 +181,15 @@ export function toEditMatch(m: MatchView): EditMatch {
       ects: c.ects?.toString() ?? '',
       grade: c.grade ?? '',
       language: c.language,
+      content: c.topics.map((t) => t.text).join('\n'),
     })),
     yalova: m.yalova.map((c) => ({ code: c.code, name: c.name, credit: c.credit, ects: c.ects, language: c.language })),
+    yalovaTopics: Object.fromEntries(
+      m.yalova.map((c) => [
+        courseKey(c),
+        { text: c.topics.map((t) => t.text).join('\n'), covered: c.topics.filter((t) => t.covered).map((t) => t.text) },
+      ]),
+    ),
   }
 }
 
@@ -158,8 +203,13 @@ export function toMatchInput(m: EditMatch) {
       ects: toNumber(c.ects),
       grade: c.grade,
       language: c.language,
+      // Karşı dersin konularında "karşılanıyor" işareti yok.
+      topics: lines(c.content).map((text) => ({ text, covered: false })),
     })),
-    yalova: m.yalova,
+    yalova: m.yalova.map((c) => {
+      const t = m.yalovaTopics[courseKey(c)] ?? { text: '', covered: [] }
+      return { ...c, topics: lines(t.text).map((text) => ({ text, covered: t.covered.includes(text) })) }
+    }),
   }
 }
 
