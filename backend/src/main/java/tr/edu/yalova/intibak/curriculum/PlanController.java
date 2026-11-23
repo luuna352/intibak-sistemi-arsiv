@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import tr.edu.yalova.intibak.common.BadRequestException;
+import tr.edu.yalova.intibak.content.ContentDocument;
+import tr.edu.yalova.intibak.content.ContentDocumentController;
 import tr.edu.yalova.intibak.user.UserService;
 
 /** Ayarlar > Ders planları. Giriş gerektirir (SecurityConfig: /api/** authenticated). */
@@ -71,6 +73,17 @@ public class PlanController {
         } catch (IOException e) {
             throw new BadRequestException("Dosya okunamadı.");
         }
+    }
+
+    /**
+     * Yalova ders içerik belgesi (A2): PDF/DOCX yüklenir, plandaki her dersin kodu belgede aranır ve bulunan
+     * içerikler öneri olarak döner. Kaydedilmez; ekranda seçilip planın "Kaydet" düğmesiyle kalıcı olur.
+     */
+    @PostMapping(value = "/{id}/content-document", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public List<CurriculumService.ContentProposal> proposeContents(@PathVariable long id,
+            @RequestParam MultipartFile file) {
+        String text = ContentDocument.text(file.getOriginalFilename(), ContentDocumentController.bytes(file));
+        return service.proposeContents(id, text);
     }
 
     /** "Yıl için hangi plan kullanılır?": /api/plans/resolve?startYear=2027. */

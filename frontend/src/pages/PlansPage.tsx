@@ -21,6 +21,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import { api } from '../api/client'
+import ContentImportDialog, { type ContentProposal } from '../curriculum/ContentImportDialog'
 import { useActiveYear } from '../settings/activeYear'
 
 // Backend'deki CurriculumService kayıtlarıyla aynı alanlar.
@@ -180,6 +181,7 @@ export default function PlansPage() {
   // İçeriği düzenlenen satır (key) ve pencerede yazılan metin; "Tamam" ile satıra geçer, "Kaydet" ile kalıcı olur.
   const [contentKey, setContentKey] = useState<number | null>(null)
   const [contentText, setContentText] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
 
   function show(d: Detail) {
     setDetail(d)
@@ -243,6 +245,17 @@ export default function PlansPage() {
         content: '',
       },
     ])
+  }
+
+  // Belgeden seçilen içerikler: aynı koddaki bütün satırlara yazılır (kod sadeleştirilerek: "BSM 201" = "BSM201").
+  function applyContents(proposals: ContentProposal[]) {
+    const plain = (code: string) => code.replace(/[\s-]/g, '').toUpperCase()
+    const byCode = new Map(proposals.map((p) => [plain(p.code), p.content]))
+    setRows(rows.map((r) => (byCode.has(plain(r.code)) ? { ...r, content: byCode.get(plain(r.code)) ?? '' } : r)))
+    setMessage({
+      type: 'success',
+      text: `${proposals.length} dersin içeriği tabloya alındı. Kalıcı olması için "Kaydet" düğmesine basın.`,
+    })
   }
 
   async function reloadList() {
@@ -348,6 +361,7 @@ export default function PlansPage() {
           </Button>
         )}
         <Button href="/api/plans/template">Boş şablonu indir</Button>
+        {detail && <Button onClick={() => setImportOpen(true)}>İçerik belgesi yükle</Button>}
       </Box>
 
       {resolutions.length > 0 && activeYear && (
@@ -568,6 +582,11 @@ export default function PlansPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {detail && (
+        <ContentImportDialog planId={detail.id} open={importOpen} onClose={() => setImportOpen(false)}
+          onApply={applyContents} />
+      )}
 
       <Dialog open={uploadOpen} onClose={() => setUploadOpen(false)}>
         <DialogTitle>Ders planı yükle</DialogTitle>

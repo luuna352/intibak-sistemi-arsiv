@@ -29,10 +29,10 @@ public class ApiExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 
-    // Yüklenen dosya application.properties'teki sınırı (5 MB) aşarsa Spring bu exception'ı fırlatır.
+    // Yüklenen dosya application.properties'teki sınırı (20 MB) aşarsa Spring bu exception'ı fırlatır.
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ProblemDetail tooLarge(MaxUploadSizeExceededException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Dosya en fazla 5 MB olabilir.");
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Dosya en fazla 20 MB olabilir.");
     }
 
     // @Valid ile işaretli istek gövdesindeki kurallar (@NotBlank, @Size ...) tutmazsa: ilk hatanın mesajı döner.

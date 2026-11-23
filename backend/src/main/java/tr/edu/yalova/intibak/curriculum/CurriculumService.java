@@ -6,9 +6,11 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.function.IntFunction;
 
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import tr.edu.yalova.intibak.common.BadRequestException;
 import tr.edu.yalova.intibak.common.NotFoundException;
+import tr.edu.yalova.intibak.content.ContentDocument;
 
 /**
  * Ders planları (Ayarlar > Ders planları): Excel yükleme, ekranda düzenleme, Excel'e aktarma ve "bu yıl için hangi
@@ -63,6 +66,13 @@ public class CurriculumService {
     public record CourseInput(Integer semester, String groupName, String code, String name, Boolean compulsory,
             CourseLanguage language, BigDecimal theoryHours, BigDecimal practiceHours, BigDecimal credit,
             BigDecimal ects, String content) {
+    }
+
+    /**
+     * İçerik belgesinden bir ders için bulunan içerik önerisi. hasContent: dersin planda zaten içeriği var mı (ekranda
+     * varsayılan olarak sadece içeriği olmayanlar seçili gelir; var olan içerik kendiliğinden ezilmez).
+     */
+    public record ContentProposal(String code, String name, String content, boolean hasContent) {
     }
 
     /**
@@ -126,6 +136,29 @@ public class CurriculumService {
         List<PlanCourse> courses = validate(inputs, i -> describe(inputs.get(i), i));
         plan.replaceCourses(courses, actorName, Instant.now(clock));
         return toDetail(plan);
+    }
+
+    /**
+     * Yalova ders içerik belgesinin yazısını plandaki derslerin kodlarına göre böler (A2). Kodu olmayan ya da
+     * "BSM4XX" gibi yer tutucu dersler aranmaz. Aynı kod planda birden çok kez varsa bir kez önerilir.
+     */
+    @Transactional(readOnly = true)
+    public List<ContentProposal> proposeContents(long id, String text) {
+        List<ContentDocument.Section> sections = ContentDocument.sections(text, "Belgenin başı");
+        List<ContentProposal> proposals = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (PlanCourse c : find(id).getCourses()) {
+            ContentDocument.Section section = ContentDocument.findByCode(sections, c.getCode());
+            if (section != null && seen.add(ContentDocument.normalizeCode(c.getCode()))) {
+                proposals.add(new ContentProposal(c.getCode(), c.getName(), normalizeContent(section.content()),
+                        c.getContent() != null));
+            }
+        }
+        if (proposals.isEmpty()) {
+            throw new BadRequestException("Belgede plandaki derslerin kodları bulunamadı. Belgede dersler kodlarıyla"
+                    + " (örn. BSM201) başlamalı; değilse içerikler elle yapıştırılabilir.");
+        }
+        return proposals;
     }
 
     /** Planı şablon biçiminde Excel'e aktarır (indirip düzeltip tekrar yüklemek için). */

@@ -115,6 +115,30 @@ class CurriculumServiceTest {
     }
 
     @Test
+    void proposesContentsForPlanCoursesFoundInTheDocument() {
+        CurriculumPlan plan = new CurriculumPlan(2025, "x", NOW);
+        PlanCourse withContent = new PlanCourse(0, 3, null, "BSM201", "Veri Yapıları", true, CourseLanguage.TR,
+                new BigDecimal("3"), BigDecimal.ZERO, new BigDecimal("3"), new BigDecimal("5"));
+        withContent.setContent("Eski konu");
+        PlanCourse elective = new PlanCourse(1, 5, null, "BSM3XX", "Teknik Seçmeli Ders 1", false, CourseLanguage.TR,
+                new BigDecimal("3"), BigDecimal.ZERO, new BigDecimal("3"), new BigDecimal("6"));
+        PlanCourse database = new PlanCourse(2, 4, null, "BSM202", "Veri Tabanı", true, CourseLanguage.TR,
+                new BigDecimal("3"), BigDecimal.ZERO, new BigDecimal("3"), new BigDecimal("5"));
+        plan.replaceCourses(List.of(withContent, elective, database), null, null);
+        when(repository.findById(1L)).thenReturn(Optional.of(plan));
+
+        List<CurriculumService.ContentProposal> proposals = service.proposeContents(1L,
+                "BSM201 Veri Yapıları\n Diziler \nAğaçlar\nBSM202 Veri Tabanı\nSQL\n");
+
+        // Yer tutucu seçmeli aranmaz; içeriği olan ders işaretlenir (ekranda kendiliğinden ezilmesin).
+        assertThat(proposals).containsExactly(
+                new CurriculumService.ContentProposal("BSM201", "Veri Yapıları", "Diziler\nAğaçlar", true),
+                new CurriculumService.ContentProposal("BSM202", "Veri Tabanı", "SQL", false));
+        assertThatThrownBy(() -> service.proposeContents(1L, "Hiç kod yok\nsadece yazı"))
+                .isInstanceOf(BadRequestException.class).hasMessageContaining("kodları bulunamadı");
+    }
+
+    @Test
     void emptyExcelIsRejected() {
         byte[] file = PlanExcel.write(List.of());
 
