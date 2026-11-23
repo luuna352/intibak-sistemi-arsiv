@@ -27,10 +27,14 @@ uygulanmaz; onlar en alttaki "Uygulanmayan öneriler" bölümünde soru olarak d
 | 4 | **Ders adları aynı** | Doğrudan kabul |
 | 5 | **Ders adları farklı** | İki dersin içeriği yan yana karşılaştırılır. Sistem örtüşme yüzdesini gösterir; **kabul kararını komisyon verir** (sabit bir eşik yok) |
 | 6 | **Kredi kuralı** | Şimdilik uygulanmaz |
-| 7 | **Yerleşim:** sayılan kredi 30'dan az 1. sınıf; 30-60 (ikisi dahil) 2. sınıf 3. dönem; 60'tan fazla 3. sınıf 5. dönem; DGS her zaman 5. dönem | Mevcut, değişmiyor |
+| 7 | **Yerleşim:** sayılan kredi 30'dan az 1. sınıf; 30-60 (ikisi dahil) 2. sınıf 3. dönem; 60'tan fazla 3. sınıf 5. dönem; DGS her zaman 5. dönem | Sistem **önerir**, komisyon sınıfı ve dönemi değiştirebilir (kullanıcı onayı: 23 Kasım) |
+| 8 | **Esneklik:** sistem öneri ve kolaylık içindir, işi hızlandırır | Derslerle ilgili her sonuç (sayıldı mı, not, yerleşim) komisyon tarafından değiştirilebilir; kesin kurallar sadece öneriyi belirler, değiştirmeyi engellemez (kullanıcı onayı: 23 Kasım) |
 
 Ek olarak daha önce yapılmış ve değişmeyen kısımlar: not, seçilen PT tablosuyla Yalova harfine çevrilir; FD, FF, DZ
 ya da tabloda olmayan notla satır sayılmaz; "Sayıldı mı?" kutusu satırı silmeden sayımdan çıkarır.
+
+> Kullanıcı (23 Kasım): "Komisyon değiştirebilir olsun. Sistem önersin. Sistemde her şey değiştirilebilir olacak, bu
+> derslerle alakalı şeylerde esnek olacak yani. Öneri ve kolaylık için yapılıyor bu sistem, işleri hızlandırmak için."
 
 ## Uygulama ayrıntıları
 
@@ -63,8 +67,6 @@ ya da tabloda olmayan notla satır sayılmaz; "Sayıldı mı?" kutusu satırı s
 
 - **DGS = 5. dönem:** hoca "5. dönem miydi tam emin değilim, Aykut Bey'e / yönetmeliğe sorun" dedi. Sistem şu an DGS'yi
   5. döneme yerleştiriyor; Aykut Bey'e sorulacak.
-- **Yerleşim öneri mi:** hoca sistemin sınıfı/dönemi "önereceğini" söyledi. Şu an hesap otomatik ve elle
-  değiştirilemiyor; komisyonun değiştirebilmesi istenirse eklenecek.
 
 ## Uygulanmayan öneriler (kullanıcı onaylarsa eklenir)
 
