@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -20,6 +20,8 @@ import Tabs from '@mui/material/Tabs'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
+import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown'
+import KeyboardArrowRight from '@mui/icons-material/KeyboardArrowRight'
 import { api } from '../api/client'
 import ContentImportDialog, { type ContentProposal } from '../curriculum/ContentImportDialog'
 import { useActiveYear } from '../settings/activeYear'
@@ -70,8 +72,10 @@ type EditRow = {
   content: string
 }
 
+// İçerikteki konular: her satır bir konu, boş satırlar atlanır.
+const topicsOf = (content: string) => content.split('\n').map((x) => x.trim()).filter((x) => x !== '')
 // İçerik kutusundaki konu sayısı (boş satırlar sayılmaz).
-const topicCount = (content: string) => content.split('\n').filter((x) => x.trim() !== '').length
+const topicCount = (content: string) => topicsOf(content).length
 
 // Sekmeler: 1-4. sınıf (her sınıf 2 yarıyıl) ve yarıyılı olmayan seçmeli havuzları.
 type TabKey = '1' | '2' | '3' | '4' | 'S'
@@ -182,6 +186,18 @@ export default function PlansPage() {
   const [contentKey, setContentKey] = useState<number | null>(null)
   const [contentText, setContentText] = useState('')
   const [importOpen, setImportOpen] = useState(false)
+  // Konuları açık olan satırlar (key). Soldaki oka basınca satır eklenir/çıkar; sadece görünüm, kayda girmez.
+  const [openKeys, setOpenKeys] = useState<Set<number>>(new Set())
+
+  function toggleOpen(key: number) {
+    // Fonksiyonlu güncelleme: art arda hızlı tıklamalarda hep en güncel küme kullanılır.
+    setOpenKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   function show(d: Detail) {
     setDetail(d)
@@ -400,6 +416,7 @@ export default function PlansPage() {
             <Table size="small">
               <TableHead>
                 <TableRow>
+                  <TableCell padding="checkbox" />
                   <TableCell>Yarıyıl</TableCell>
                   <TableCell>Grup</TableCell>
                   <TableCell>Kod</TableCell>
@@ -416,7 +433,16 @@ export default function PlansPage() {
               </TableHead>
               <TableBody>
                 {visible.map((r) => (
-                  <TableRow key={r.key}>
+                  // Fragment: ders satırı ve (açıksa) altındaki konular satırı birlikte döner.
+                  <Fragment key={r.key}>
+                  <TableRow>
+                    <TableCell padding="checkbox">
+                      {/* Ok: dersin konularını hemen altında açar/kapatır. */}
+                      <IconButton size="small" aria-label={openKeys.has(r.key) ? 'Konuları kapat' : 'Konuları aç'}
+                        onClick={() => toggleOpen(r.key)}>
+                        {openKeys.has(r.key) ? <KeyboardArrowDown fontSize="small" /> : <KeyboardArrowRight fontSize="small" />}
+                      </IconButton>
+                    </TableCell>
                     <TableCell>
                       <TextField
                         select
@@ -513,13 +539,34 @@ export default function PlansPage() {
                       </IconButton>
                     </TableCell>
                   </TableRow>
+                  {openKeys.has(r.key) && (
+                    // Konular satırı: bütün sütunları kaplar, konular numaralı liste. Düzenleme "N konu" penceresinden.
+                    <TableRow sx={{ bgcolor: 'action.hover' }}>
+                      <TableCell colSpan={13}>
+                        {topicCount(r.content) === 0 ? (
+                          <Typography variant="body2" color="text.secondary">
+                            İçerik girilmemiş.
+                          </Typography>
+                        ) : (
+                          <Box component="ol" sx={{ m: 0, pl: 4 }}>
+                            {topicsOf(r.content).map((topic, i) => (
+                              <Typography component="li" variant="body2" key={i}>
+                                {topic}
+                              </Typography>
+                            ))}
+                          </Box>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </Fragment>
                 ))}
               </TableBody>
               {totals.length > 0 && (
                 <TableFooter>
                   {totals.map((t) => (
                     <TableRow key={t.title} sx={{ bgcolor: 'action.hover' }}>
-                      <TableCell colSpan={6} sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                      <TableCell colSpan={7} sx={{ fontWeight: 'bold', color: 'text.primary' }}>
                         {t.title}
                       </TableCell>
                       {[t.t, t.u, t.credit, t.ects].map((n, i) => (
