@@ -137,6 +137,36 @@
       <div><label>Geçiş türü</label><select style="width:100%"><option>Yatay geçiş</option><option>DGS</option><option>Af</option></select></div>
     </div>
   </div>
+  <!-- A5: iki sütunlu karşılaştırma. Sol: öğrencinin bütün dersleri (eşleşen + eşleşmeyen), sağ: Yalova planı. -->
+  <div class="card"><h3>Karşılaştırma</h3>
+    <div class="bar" style="margin-bottom:8px"><span class="tot">5 öğrenci dersi · 2 eşleşmemiş</span><span style="flex:1"></span><button class="btn">Otomatik eşleştir (1)</button> <button class="btn">Seçilenleri eşleştir (1 → 1)</button></div>
+    <div class="hint" style="margin-bottom:8px">Adı aynı dersler ve Türk Dili / Atatürk İlkeleri otomatik eşleşir. Adı farklı dersleri iki taraftan işaretleyip eşleştirin; o satırda içerik karşılaştırılır. ▾: içeriği aç.</div>
+    <div style="display:grid;grid-template-columns:3fr 2fr;gap:14px">
+      <table>
+        <thead><tr><th></th><th>Kod</th><th>Ders adı</th><th>Yy</th><th>Kr</th><th>Not</th><th>Dil</th><th>Durum</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><input type="checkbox" disabled></td><td>TD101</td><td>Türkçe I</td><td>1</td><td>2</td><td>BB</td><td>TR</td><td><span class="badd" style="color:var(--ok)">1. eşl.</span></td><td>▾ 🗑</td></tr>
+          <tr><td><input type="checkbox"></td><td>FIZ101</td><td>FİZİK - I</td><td>1</td><td>4</td><td>CB</td><td>TR</td><td>Eşleşmedi</td><td>▾ 🗑</td></tr>
+          <tr><td><input type="checkbox" checked></td><td>CENG105</td><td>Algoritmalar</td><td>1</td><td>3</td><td>BA</td><td>TR</td><td>Eşleşmedi</td><td>▴ 🗑</td></tr>
+          <tr><td colspan="9" style="background:#f4f6f9;font-size:12px">Akış diyagramları · Sözde kod · Döngüler · Diziler (belgede adıyla bulundu)</td></tr>
+          <tr><td><input type="checkbox"></td><td>CENG201</td><td>Web Teknolojileri</td><td>3</td><td>3</td><td style="color:var(--bad)">BL</td><td>TR</td><td><span class="badd" style="color:var(--ok)">2. eşl.</span></td><td>▾ 🗑</td></tr>
+          <tr><td colspan="9" style="color:var(--bad);font-size:12px">BL notsuzdur: gerçek harf notunu öğrencinin önceki kaydının transkriptinden yazın.</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th></th><th>Yalova dersi (2025 planı) <input placeholder="Ara" style="width:90px;float:right"></th><th>Durum</th></tr></thead>
+        <tbody>
+          <tr><td colspan="3" style="background:#eef1f5;font-weight:600;font-size:12px">1. yarıyıl</td></tr>
+          <tr><td><input type="checkbox"></td><td>TDL101 Türk Dili I<div class="hint">2 kr · 2 AKTS</div></td><td><span class="badd" style="color:var(--ok)">1. eşl.</span></td></tr>
+          <tr><td><input type="checkbox"></td><td>FIZ101 Fizik I<div class="hint">4 kr · 5 AKTS</div></td><td>Eşleşmedi</td></tr>
+          <tr><td><input type="checkbox" checked></td><td>BSM101 Programlamaya Giriş<div class="hint">4 kr · 6 AKTS</div></td><td>Eşleşmedi</td></tr>
+          <tr><td colspan="3" style="background:#eef1f5;font-weight:600;font-size:12px">7. yarıyıl</td></tr>
+          <tr><td><input type="checkbox"></td><td style="color:var(--bad)">❗ BSM470 Oyun Programlama<div class="hint">3 kr · 5 AKTS · seçmeli · içeriği yok, isim benzerliği yok</div></td><td>Eşleşmedi</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="hint" style="margin-top:6px">Otomatik eşleştir (1): "FİZİK - I" ↔ "Fizik I" (ad aynı). "Algoritmalar" ↔ "Programlamaya Giriş" adı farklı: komisyon seçip eşleştirir.</div>
+  </div>
   <div class="card"><h3>Ders eşleştirme</h3>
     <table>
       <thead><tr><th>Geldiği dersler</th><th>Geldiği not</th><th>Not (dönüşüm: PT1)</th><th>Bizim ders</th><th>Kredi</th><th>Sayıldı mı?</th></tr></thead>

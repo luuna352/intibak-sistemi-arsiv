@@ -11,6 +11,7 @@ import Paper from '@mui/material/Paper'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { api } from '../api/client'
+import CourseBoard from '../records/CourseBoard'
 import GradeTablePreview from '../records/GradeTablePreview'
 import MatchTable from '../records/MatchTable'
 import RecordDocuments from '../records/RecordDocuments'
@@ -23,18 +24,26 @@ import {
   statusColor,
   toEditMatch,
   toMatchInput,
+  type CourseView,
   type DocumentSection,
   type EditMatch,
   type Evaluation,
   type RecordDetail,
-  type YalovaCourse,
 } from '../records/records'
+import {
+  sendPlan,
+  toEditSource,
+  toSourceInput,
+  type EditSource,
+  type PlanCourse,
+  type SourceCourseView,
+} from '../records/sourceCourses'
 import { useActiveYear } from '../settings/activeYear'
 
 type Option = { value: string; label: string }
 type GradeTableSummary = { id: number; code: string; name: string }
 type PlanSummary = { id: number; startYear: number; label: string }
-type PlanDetail = { id: number; label: string; courses: YalovaCourse[] }
+type PlanDetail = { id: number; label: string; courses: PlanCourse[] }
 type Resolution = { requestedLabel: string; planId: number | null; planLabel: string | null }
 // Kayıt detayı: öğrenci bilgileri + PT, plan ve eşleştirmenin hesaplanmış hali.
 type Detail = RecordDetail & {
@@ -44,6 +53,8 @@ type Detail = RecordDetail & {
   // Komisyonun sınıf/dönem kararı; ikisi de null ise sistemin önerisi geçerli.
   placementClassLevel: number | null
   placementSemester: number | null
+  // Öğrencinin transkriptindeki bütün dersler (V14).
+  sourceCourses: SourceCourseView[]
 }
 
 // Komisyonun seçebileceği sınıf/dönemler: 1. sınıf (1. ve 2. dönem) ... 4. sınıf (7. ve 8. dönem). Değer "2-3" gibi.
@@ -95,7 +106,9 @@ export default function RecordFormPage() {
   const [form, setForm] = useState<Form>(EMPTY)
   const [gradeTableId, setGradeTableId] = useState('')
   const [planId, setPlanId] = useState('')
-  const [planCourses, setPlanCourses] = useState<YalovaCourse[]>([])
+  const [planCourses, setPlanCourses] = useState<PlanCourse[]>([])
+  // Öğrencinin ders listesi (sol sütun) ve eşleştirme satırları; satırlardaki karşı dersler listeye key ile bağlı.
+  const [sources, setSources] = useState<EditSource[]>([])
   const [matches, setMatches] = useState<EditMatch[]>([])
   // Öğrencinin ders içeriklerinin bölümleri ("Belgede bul" için): kayıtlı içerik belgesinden ya da içerikler
   // transkriptteyse transkriptten okunur (RecordDocuments).
@@ -151,6 +164,7 @@ export default function RecordFormPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       const keys = matches.map((m) => m.key)
+      const { list, indexOf } = sendPlan(sources, matches)
       api<Evaluation>('/api/records/evaluate', {
         method: 'POST',
         body: {
@@ -159,7 +173,8 @@ export default function RecordFormPage() {
           prepStatus: form.prepStatus,
           departmentLanguage: form.departmentLanguage,
           gradeTableId: gradeTableId === '' ? null : Number(gradeTableId),
-          matches: matches.map(toMatchInput),
+          sourceCourses: list.map(toSourceInput),
+          matches: matches.map((m) => toMatchInput(m, indexOf)),
         },
       })
         .then((e) => {
@@ -172,7 +187,7 @@ export default function RecordFormPage() {
         })
     }, 500)
     return () => clearTimeout(timer)
-  }, [form.transferType, form.prepStatus, form.departmentLanguage, gradeTableId, matches])
+  }, [form.transferType, form.prepStatus, form.departmentLanguage, gradeTableId, sources, matches])
 
   // Geçerli sınıf: komisyon karar verdiyse o, vermediyse sistemin önerisi. Plan önerisi bu sınıfa göre yapılır.
   const decided = PLACEMENTS.find((p) => p.value === placementChoice)
@@ -192,7 +207,19 @@ export default function RecordFormPage() {
     setForm(toForm(d))
     setGradeTableId(d.gradeTableId === null ? '' : String(d.gradeTableId))
     setPlanId(d.planId === null ? '' : String(d.planId))
-    setMatches(d.evaluation.matches.map(toEditMatch))
+    // Kayıttaki ders listesi ekrana alınır; karşı dersler listedeki sırasıyla (source) bağlanır. V14'ten önce
+    // açılmış kayıtlarda karşı dersin listede yeri yoktur (source boş): o ders listenin sonuna eklenir.
+    const list = d.sourceCourses.map(toEditSource)
+    const extra: EditSource[] = []
+    const keyOf = (c: CourseView) => {
+      if (c.source !== null && list[c.source]) return list[c.source].key
+      const s = toEditSource({ code: c.code, name: c.name, semester: c.semester, credit: c.credit, ects: c.ects,
+        language: c.language, grade: c.grade })
+      extra.push(s)
+      return s.key
+    }
+    setMatches(d.evaluation.matches.map((m) => toEditMatch(m, keyOf)))
+    setSources([...list, ...extra])
     setEvaluation(d.evaluation)
     setPlacementChoice(
       d.placementClassLevel !== null && d.placementSemester !== null ? `${d.placementClassLevel}-${d.placementSemester}` : "",
@@ -204,6 +231,7 @@ export default function RecordFormPage() {
 
   async function save() {
     setMessage(null)
+    const { list, indexOf } = sendPlan(sources, matches)
     const body = {
       ...form,
       transferType: form.transferType || null,
@@ -211,7 +239,8 @@ export default function RecordFormPage() {
       registrationDate: form.registrationDate || null,
       gradeTableId: gradeTableId === '' ? null : Number(gradeTableId),
       planId: planId === '' ? null : Number(planId),
-      matches: matches.map(toMatchInput),
+      sourceCourses: list.map(toSourceInput),
+      matches: matches.map((m) => toMatchInput(m, indexOf)),
       placementClassLevel: decided?.classLevel ?? null,
       placementSemester: decided?.semester ?? null,
       confirmed,
@@ -355,7 +384,12 @@ export default function RecordFormPage() {
             Henüz ders planı yüklenmemiş. Ayarlar &gt; Ders planları'ndan yükleyin.
           </Alert>
         )}
-        <MatchTable matches={matches} onChange={setMatches} results={evaluation?.matches ?? []}
+        <CourseBoard sources={sources} onSourcesChange={setSources} matches={matches} onMatchesChange={setMatches}
+          planCourses={planCourses} sections={sections} disabled={cancelled} />
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+          Eşleştirme satırları
+        </Typography>
+        <MatchTable matches={matches} onChange={setMatches} results={evaluation?.matches ?? []} sources={sources}
           planCourses={planCourses} sections={sections} disabled={cancelled} />
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Notlar seçilen PT tablosuyla Yalova notuna çevrilir. Puan iki aralığın arasında kalırsa ya da birleştirilen

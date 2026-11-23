@@ -6,7 +6,6 @@ import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import IconButton from '@mui/material/IconButton'
-import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
@@ -14,22 +13,25 @@ import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import ContentComparison from './ContentComparison'
 import NoContentMark from './NoContentMark'
 import {
-  courseKey,
-  emptyIncoming,
   emptyMatch,
+  findSection,
   lacksContent,
+  newKey,
+  withPlanTopics,
   type DocumentSection,
-  type EditIncoming,
   type EditMatch,
   type MatchView,
   type YalovaCourse,
 } from './records'
+import { isBL, sendPlan, sourceLabel, type EditSource } from './sourceCourses'
 
 type Props = {
   matches: EditMatch[]
   onChange: (matches: EditMatch[]) => void
   // Hesap sonucu (backend önizlemesi); satır sırası matches ile aynı.
   results: MatchView[]
+  // Öğrencinin ders listesi (soldaki açılır listenin seçenekleri; not, kredi gibi bilgiler buradan okunur).
+  sources: EditSource[]
   // Seçilen Yalova planının dersleri (sağ taraftaki açılır listenin seçenekleri).
   planCourses: YalovaCourse[]
   // Öğrencinin ders içerik belgesinin bölümleri (A3); içerik karşılaştırmasında seçilir.
@@ -43,38 +45,34 @@ const label = (c: YalovaCourse) =>
 const same = (a: YalovaCourse, b: YalovaCourse) => a.code === b.code && a.name === b.name
 
 /**
- * Yalova dersleri seçilince: yeni seçilen dersin konuları plandaki içeriğinden gelir (A2). Daha önce konusu yazılmış
- * ders değişmez; komisyonun yazdığı ya da işaretlediği konular ezilmez. İçerik dersin içinde taşınmaz.
- */
-function withPlanTopics(m: EditMatch, value: YalovaCourse[]): Partial<EditMatch> {
-  const yalovaTopics = { ...m.yalovaTopics }
-  for (const c of value) {
-    const key = courseKey(c)
-    if (!yalovaTopics[key] && c.content) yalovaTopics[key] = { text: c.content, covered: [] }
-  }
-  const yalova = value.map(({ code, name, credit, ects, language }) => ({ code, name, credit, ects, language }))
-  return { yalova, yalovaTopics }
-}
-
-/**
  * Ders eşleştirme tablosu: her satırın solunda karşı kurumun ders(ler)i, sağında Yalova'nın ders(ler)i.
  * Solda birden çok ders = çoğa-bir, sağda birden çok ders = bire-çok. Notların Yalova karşılığı, birleşik not ve
  * satırın sorunları backend hesabından (results) gelir.
  */
-export default function MatchTable({ matches, onChange, results, planCourses, sections, disabled }: Props) {
+export default function MatchTable({ matches, onChange, results, sources, planCourses, sections, disabled }: Props) {
   const update = (key: number, change: Partial<EditMatch>) =>
     onChange(matches.map((m) => (m.key === key ? { ...m, ...change } : m)))
 
-  const updateIncoming = (m: EditMatch, key: number, field: keyof EditIncoming, value: string) =>
-    update(m.key, { incoming: m.incoming.map((c) => (c.key === key ? { ...c, [field]: value } : c)) })
+  // Seçilebilecek dersler: adı yazılmış olanlar. indexOf: dersin önizlemeye giden listedeki sırası.
+  const named = sources.filter((s) => s.name.trim() !== '')
+  const { indexOf } = sendPlan(sources, matches)
+
+  // Soldaki seçim değişince: kalan derslerin içeriği korunur, yeni seçilen dersin içeriği öğrencinin içerik
+  // belgesinde adıyla aranır (bulunamazsa boş; komisyon içerik karşılaştırmasında yazar ya da seçer).
+  const pickIncoming = (m: EditMatch, value: EditSource[]) =>
+    value.map(
+      (s) =>
+        m.incoming.find((c) => c.sourceKey === s.key) ?? {
+          key: newKey(),
+          sourceKey: s.key,
+          content: findSection(sections, s.name)?.content ?? '',
+        },
+    )
 
   return (
     <>
       {matches.map((m, i) => {
         const r = results[i]
-        // Önizlemeye sadece adı yazılmış dersler gider; Yalova karşılıklarını o derslere sırayla eşleriz.
-        let named = 0
-        const converted = m.incoming.map((c) => (c.name.trim() === '' ? null : r?.incoming[named++]?.convertedGrade))
         return (
           <Paper key={m.key} variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 1 }}>
@@ -110,51 +108,42 @@ export default function MatchTable({ matches, onChange, results, planCourses, se
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: 2 }}>
               <Box>
                 <Typography variant="caption" color="text.secondary">
-                  Karşı kurumun dersi (birden çok ders birleştirilebilir)
+                  Karşı kurumun dersi, öğrencinin ders listesinden (birden çok seçilebilir: çoğa-bir)
                 </Typography>
-                {m.incoming.map((c, j) => {
-                  // BL: önceki üniversitede alınıp oraya notsuz geçirilmiş ders. Bizde harf notu işlediği için gerçek
-                  // harf öğrencinin önceki kaydının transkriptinden yazılır; ipucu satırın altında gösterilir.
-                  const isBL = c.grade.trim().toLocaleUpperCase('tr') === 'BL'
+                <Autocomplete
+                  multiple
+                  size="small"
+                  disabled={disabled}
+                  options={named}
+                  value={m.incoming.flatMap((c) => sources.filter((s) => s.key === c.sourceKey))}
+                  getOptionLabel={sourceLabel}
+                  isOptionEqualToValue={(a, b) => a.key === b.key}
+                  onChange={(_, value) => update(m.key, { incoming: pickIncoming(m, value) })}
+                  noOptionsText="Öğrencinin ders listesi boş (yukarıdaki listeye ders ekleyin)"
+                  renderInput={(params) => <TextField {...params} placeholder="Kod ya da ad yazın" />}
+                  sx={{ mt: 1 }}
+                />
+                {m.incoming.map((c) => {
+                  const s = sources.find((x) => x.key === c.sourceKey)
+                  if (!s) return null
+                  // Notun seçilen PT tablosuna göre Yalova karşılığı (önizleme sonucunda listedeki sırasıyla bulunur).
+                  const converted = r?.incoming.find((x) => x.source === indexOf(s.key))?.convertedGrade
                   return (
-                    <Box key={c.key} sx={{ mt: 1 }}>
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <TextField size="small" label="Ders adı" value={c.name} disabled={disabled}
-                          onChange={(e) => updateIncoming(m, c.key, 'name', e.target.value)} sx={{ flex: 1, minWidth: 180 }} />
-                        <TextField size="small" label="Kredi" value={c.credit} disabled={disabled}
-                          onChange={(e) => updateIncoming(m, c.key, 'credit', e.target.value)} sx={{ width: 70 }} />
-                        <TextField size="small" label="AKTS" value={c.ects} disabled={disabled}
-                          onChange={(e) => updateIncoming(m, c.key, 'ects', e.target.value)} sx={{ width: 70 }} />
-                        <TextField size="small" label="Not" value={c.grade} disabled={disabled} error={isBL}
-                          onChange={(e) => updateIncoming(m, c.key, 'grade', e.target.value)} sx={{ width: 70 }} />
-                        <TextField select size="small" label="Dil" value={c.language} disabled={disabled}
-                          onChange={(e) => updateIncoming(m, c.key, 'language', e.target.value)} sx={{ width: 72 }}>
-                          <MenuItem value="TR">TR</MenuItem>
-                          <MenuItem value="EN">EN</MenuItem>
-                        </TextField>
-                        {/* Notun seçilen PT tablosuna göre Yalova karşılığı. */}
-                        <Typography variant="body2" sx={{ width: 48 }}>
-                          {converted[j] ? `→ ${converted[j]}` : ''}
-                        </Typography>
-                        {m.incoming.length > 1 && (
-                          <IconButton size="small" aria-label="Karşı dersi çıkar" disabled={disabled}
-                            onClick={() => update(m.key, { incoming: m.incoming.filter((x) => x.key !== c.key) })}>
-                            <DeleteOutlined fontSize="small" />
-                          </IconButton>
-                        )}
-                      </Box>
-                      {isBL && (
-                        <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+                    <Box key={c.key} sx={{ mt: 0.5 }}>
+                      <Typography variant="body2">
+                        {s.name || '(adsız)'} · not: {s.grade || '-'}
+                        {converted ? ` → ${converted}` : ''}
+                      </Typography>
+                      {/* BL: önceki üniversitede alınıp oraya notsuz geçirilmiş ders. Bizde harf notu işlediği için
+                          gerçek harf öğrencinin önceki kaydının transkriptinden yazılır. */}
+                      {isBL(s.grade) && (
+                        <Typography variant="caption" color="error" sx={{ display: 'block' }}>
                           BL notsuzdur: gerçek harf notunu öğrencinin önceki kaydının transkriptinden yazın.
                         </Typography>
                       )}
                     </Box>
                   )
                 })}
-                <Button size="small" sx={{ mt: 1 }} disabled={disabled}
-                  onClick={() => update(m.key, { incoming: [...m.incoming, emptyIncoming()] })}>
-                  + Karşı ders ekle (çoğa-bir)
-                </Button>
               </Box>
 
               <Box>
@@ -190,7 +179,7 @@ export default function MatchTable({ matches, onChange, results, planCourses, se
               </Box>
             </Box>
 
-            <ContentComparison match={m} result={r} sections={sections} disabled={disabled} onChange={(change) => update(m.key, change)} />
+            <ContentComparison match={m} result={r} sections={sections} sources={sources} disabled={disabled} onChange={(change) => update(m.key, change)} />
 
             {r && r.problems.length > 0 && (
               <Alert severity={m.counted ? 'error' : 'warning'} sx={{ mt: 1 }}>

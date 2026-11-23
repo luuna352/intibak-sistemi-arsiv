@@ -87,6 +87,9 @@ export type CourseView = {
   convertedGrade: string | null
   // Dersin içeriği, konu konu (kural 5). covered: Yalova konusu karşı derste karşılanıyor mu.
   topics: { text: string; covered: boolean }[]
+  // Karşı dersin öğrencinin ders listesindeki sırası ve yarıyılı (Yalova dersinde boş).
+  source: number | null
+  semester: string | null
 }
 
 export type MatchView = {
@@ -112,15 +115,12 @@ export type Placement = { countedCredit: number; classLevel: number; semester: n
 
 export type Evaluation = { matches: MatchView[]; placement: Placement }
 
-// Ekranda düzenlenen karşı kurum dersi: kutular metin tutar. key: React'in satırları ayırt etmesi için sabit numara.
-// content: dersin içeriği, her satır bir konu.
+// Eşleştirme satırındaki karşı kurum dersi: öğrencinin ders listesindeki bir derse bağlıdır (sourceKey = o dersin
+// key'i); kod, ad, not gibi bilgiler listeden okunur. content: bu eşleştirmedeki içerik karşılaştırması için dersin
+// içeriği, her satır bir konu. key: React'in satırları ayırt etmesi için sabit numara.
 export type EditIncoming = {
   key: number
-  name: string
-  credit: string
-  ects: string
-  grade: string
-  language: Language
+  sourceKey: number
   content: string
 }
 
@@ -203,21 +203,11 @@ export function findSection(sections: DocumentSection[], courseName: string): Do
 let nextKey = 1
 export const newKey = () => nextKey++
 
-export const emptyIncoming = (): EditIncoming => ({
-  key: newKey(),
-  name: '',
-  credit: '',
-  ects: '',
-  grade: '',
-  language: 'TR',
-  content: '',
-})
-
 export const emptyMatch = (): EditMatch => ({
   key: newKey(),
   counted: true,
   countedTouched: false,
-  incoming: [emptyIncoming()],
+  incoming: [],
   yalova: [],
   yalovaTopics: {},
 })
@@ -225,8 +215,25 @@ export const emptyMatch = (): EditMatch => ({
 // "3,5" gibi Türkçe virgüllü yazımı da kabul eder; boş kutu = değer yok (null).
 export const toNumber = (s: string): number | null => (s.trim() === '' ? null : Number(s.replace(',', '.')))
 
-/** Kayıttan gelen satırı düzenlenebilir hale getirir. */
-export function toEditMatch(m: MatchView): EditMatch {
+/**
+ * Yalova dersleri seçilince: yeni seçilen dersin konuları plandaki içeriğinden gelir (A2). Daha önce konusu yazılmış
+ * ders değişmez; komisyonun yazdığı ya da işaretlediği konular ezilmez. İçerik dersin içinde taşınmaz.
+ */
+export function withPlanTopics(m: EditMatch, value: YalovaCourse[]): Pick<EditMatch, 'yalova' | 'yalovaTopics'> {
+  const yalovaTopics = { ...m.yalovaTopics }
+  for (const c of value) {
+    const key = courseKey(c)
+    if (!yalovaTopics[key] && c.content) yalovaTopics[key] = { text: c.content, covered: [] }
+  }
+  const yalova = value.map(({ code, name, credit, ects, language }) => ({ code, name, credit, ects, language }))
+  return { yalova, yalovaTopics }
+}
+
+/**
+ * Kayıttan gelen satırı düzenlenebilir hale getirir. sourceKeyOf: karşı dersin öğrencinin listesindeki dersinin
+ * key'i (sayfa, kayıttaki listeyi ekrana alırken verir).
+ */
+export function toEditMatch(m: MatchView, sourceKeyOf: (c: CourseView) => number): EditMatch {
   return {
     key: newKey(),
     counted: m.counted,
@@ -234,11 +241,7 @@ export function toEditMatch(m: MatchView): EditMatch {
     countedTouched: true,
     incoming: m.incoming.map((c) => ({
       key: newKey(),
-      name: c.name,
-      credit: c.credit?.toString() ?? '',
-      ects: c.ects?.toString() ?? '',
-      grade: c.grade ?? '',
-      language: c.language,
+      sourceKey: sourceKeyOf(c),
       content: c.topics.map((t) => t.text).join('\n'),
     })),
     yalova: m.yalova.map((c) => ({ code: c.code, name: c.name, credit: c.credit, ects: c.ects, language: c.language })),
@@ -251,19 +254,21 @@ export function toEditMatch(m: MatchView): EditMatch {
   }
 }
 
-/** Backend'e gidecek biçim (RecordService.MatchInput). */
-export function toMatchInput(m: EditMatch) {
+/**
+ * Backend'e gidecek biçim (RecordService.MatchInput). indexOf: listedeki dersin gönderilen listedeki sırası (-1:
+ * listede yok, o karşı ders gönderilmez). Karşı dersin bilgilerini backend listeden alır; buradan sadece sıra ve
+ * içerik gider.
+ */
+export function toMatchInput(m: EditMatch, indexOf: (sourceKey: number) => number) {
   return {
     counted: m.counted,
-    incoming: m.incoming.map((c) => ({
-      name: c.name,
-      credit: toNumber(c.credit),
-      ects: toNumber(c.ects),
-      grade: c.grade,
-      language: c.language,
-      // Karşı dersin konularında "karşılanıyor" işareti yok.
-      topics: lines(c.content).map((text) => ({ text, covered: false })),
-    })),
+    incoming: m.incoming
+      .map((c) => ({
+        source: indexOf(c.sourceKey),
+        // Karşı dersin konularında "karşılanıyor" işareti yok.
+        topics: lines(c.content).map((text) => ({ text, covered: false })),
+      }))
+      .filter((c) => c.source >= 0),
     yalova: m.yalova.map((c) => {
       const t = m.yalovaTopics[courseKey(c)] ?? { text: '', covered: [] }
       return {

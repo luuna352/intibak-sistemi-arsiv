@@ -3,15 +3,20 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import MatchTable from './MatchTable'
 import { emptyMatch, type EditMatch } from './records'
+import { emptySource, type EditSource } from './sourceCourses'
 
-// Tek eşleştirme satırı; karşı dersin notu verilen değer.
+// Öğrencinin listesindeki tek ders; notu teste göre değişir.
+let source: EditSource = emptySource()
+
+// Tek eşleştirme satırı; karşı ders listedeki derse bağlı, notu verilen değer.
 function rowWithGrade(grade: string): EditMatch {
-  const m = emptyMatch()
-  return { ...m, incoming: [{ ...m.incoming[0], name: 'Fizik I', grade }] }
+  source = { ...emptySource(), name: 'Fizik I', grade }
+  return { ...emptyMatch(), incoming: [{ key: 1, sourceKey: source.key, content: '' }] }
 }
 
 function draw(match: EditMatch) {
-  render(<MatchTable matches={[match]} onChange={vi.fn()} results={[]} planCourses={[]} sections={[]} disabled={false} />)
+  render(<MatchTable matches={[match]} onChange={vi.fn()} results={[]} sources={[source]} planCourses={[]}
+    sections={[]} disabled={false} />)
 }
 
 describe('MatchTable', () => {
@@ -34,7 +39,7 @@ describe('MatchTable', () => {
       counted: true, incoming: [], yalova: [], grade: 'BA', yalovaCredit: 3, problems: [], warnings: [],
       suggestCounted: false, basis: 'CONTENT' as const, basisLabel: 'İçerik karşılaştırması', contentPercent: null,
     }
-    render(<MatchTable matches={[match]} onChange={vi.fn()} results={[result]} planCourses={[course]} sections={[]} disabled={false} />)
+    render(<MatchTable matches={[match]} onChange={vi.fn()} results={[result]} sources={[source]} planCourses={[course]} sections={[]} disabled={false} />)
   }
 
   it('içeriği olmayan ve adı tutmayan Yalova dersinin yanında kırmızı ünlem çıkar', () => {

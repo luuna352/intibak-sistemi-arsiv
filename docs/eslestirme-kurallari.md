@@ -74,6 +74,22 @@ sayılamaz (eksik bilgi). "Sayıldı mı?" kutusu satırı silmeden sayımdan ç
   en fazla 30 MB; aynı türden yenisi eskisinin yerine geçer). İçerikler transkriptin içindeyse "Ders içerikleri
   transkriptin içinde" işaretlenir, ayrı içerik belgesi istenmez ve "Belgede bul" transkriptte arar. Yeni kayıtta
   seçilen dosyalar "Kaydet" ile kayıt oluşunca yüklenir.
+- **A5 (yapıldı): öğrencinin ders listesi ve iki sütunlu karşılaştırma ekranı.** Kayıtta öğrencinin transkriptindeki
+  bütün dersler saklanır, eşleşmeyenler de (V14, `intibak_source_course`: kod, ad, yarıyıl, kredi, AKTS, dil, not).
+  Formdaki "Karşılaştırma" bölümünde solda bu liste (elle düzenlenir), sağda seçilen planın Yalova dersleri
+  (yarıyıla göre); dersin ▾ düğmesine / adına basınca içeriği açılır. Her dersin yanında hangi eşleştirme satırında
+  olduğu ya da "Eşleşmedi" yazar.
+  - **"Otomatik eşleştir" düğmesi:** henüz hiçbir satırda olmayan derslerden adı aynı olanları (kural 4) ve Türk Dili /
+    Atatürk İlkeleri derslerini (kural 3; öğrencide "Türkçe" de olabilir, numarası da tutmalı: Türk Dili I ↔ Türk Dili
+    I) birebir eşleştirir. Adı farklı dersler otomatik eşleşmez. Yazarken kendiliğinden değil düğmeyle çalışır: yarım
+    yazılmış adla yanlış eşleşme olmasın, komisyonun sildiği satır geri gelmesin.
+  - **Elle eşleştirme:** komisyon iki taraftan dersleri işaretleyip "Seçilenleri eşleştir" der (birden çok = çoğa-bir
+    ya da bire-çok); satırda içerik karşılaştırması yapılır (kural 5). Karşı dersin içeriği belgede adıyla aranır.
+  - **Kural 5b sağ listede de görünür:** içeriği olmayan ve öğrencinin listesinde aynı adlı dersi olmayan Yalova
+    dersinin yanında kırmızı ünlem ve "içeriği yok, isim benzerliği yok" yazar.
+  - Eşleştirme satırındaki karşı ders listedeki derse bağlıdır: not, kredi gibi bilgiler listede düzeltilir, satıra
+    kendiliğinden yansır. Ders listeden silinirse satırlardan da çıkar. V14'ten önce açılmış kayıtların karşı dersleri
+    açılınca listeye eklenir.
 
 ## Bir öğrencinin birden çok kaydı (23 Kasım kararı)
 

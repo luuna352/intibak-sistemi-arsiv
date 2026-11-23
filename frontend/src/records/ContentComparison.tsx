@@ -11,6 +11,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 import { courseKey, findSection, lines, type DocumentSection, type EditMatch, type MatchView } from './records'
+import type { EditSource } from './sourceCourses'
 
 type Props = {
   match: EditMatch
@@ -18,6 +19,8 @@ type Props = {
   result: MatchView | undefined
   // Yüklenen öğrenci içerik belgesinin bölümleri (A3); belge yüklenmediyse boş.
   sections: DocumentSection[]
+  // Öğrencinin ders listesi: karşı dersin adı buradan okunur.
+  sources: EditSource[]
   onChange: (change: Partial<EditMatch>) => void
   disabled: boolean
 }
@@ -29,7 +32,8 @@ type Props = {
  * komisyonundur. Ad farklıysa (içerik karşılaştırması gereken satır) bölüm açık gelir; diğerlerinde kapalıdır.
  * Yalova dersi kaldırılırsa konuları da kayda gitmez (sadece seçili derslerin konuları gönderilir).
  */
-export default function ContentComparison({ match, result, sections, onChange, disabled }: Props) {
+export default function ContentComparison({ match, result, sections, sources, onChange, disabled }: Props) {
+  const nameOf = (sourceKey: number) => sources.find((s) => s.key === sourceKey)?.name ?? ''
   // Kullanıcı açıp kapatmadıysa (null) bölüm satırın kuralını izler: içerik karşılaştırması gerekiyorsa açık.
   const [open, setOpen] = useState<boolean | null>(null)
   // "Belgede bul" sonuç vermeyen karşı derslerin anahtarları (altında "bulunamadı" yazısı çıkar).
@@ -74,17 +78,17 @@ export default function ContentComparison({ match, result, sections, onChange, d
         {/* Geniş ekranda iki sütun (sol: karşı ders, sağ: Yalova), dar ekranda alt alta. */}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
           <Box>
-            {match.incoming.map((c) => (
+            {match.incoming.map((c) => ({ c, name: nameOf(c.sourceKey) })).map(({ c, name }) => (
               <Box key={c.key} sx={{ mb: 1 }}>
                 <TextField fullWidth multiline minRows={4} size="small"
-                  label={`Karşı ders: ${c.name || '(adsız)'} · içerik`} value={c.content} disabled={disabled}
+                  label={`Karşı ders: ${name || '(adsız)'} · içerik`} value={c.content} disabled={disabled}
                   placeholder="Her satıra bir konu yazın ya da ders içerik belgesinden yapıştırın"
                   onChange={(e) => setIncomingContent(c.key, e.target.value)} />
                 {/* Belge yüklendiyse: adıyla otomatik bul ya da bölümü listeden elle seç (bölme yanılabilir). */}
                 {sections.length > 0 && (
                   <Box sx={{ display: 'flex', gap: 1, mt: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Button size="small" variant="outlined" disabled={disabled || c.name.trim() === ''}
-                      onClick={() => findInDocument(c.key, c.name)}>
+                    <Button size="small" variant="outlined" disabled={disabled || name.trim() === ''}
+                      onClick={() => findInDocument(c.key, name)}>
                       Belgede bul
                     </Button>
                     <TextField select size="small" label="Belgeden bölüm seç" value="" disabled={disabled}

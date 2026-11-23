@@ -72,18 +72,26 @@ describe('toMatchInput / toEditMatch', () => {
     const saved = view({
       counted: false,
       incoming: [{ code: null, name: 'Data Structures', credit: 3, ects: 5, language: 'EN', grade: 'AA',
-        convertedGrade: 'AA', topics: [{ text: 'Lists', covered: false }] }],
+        convertedGrade: 'AA', topics: [{ text: 'Lists', covered: false }], source: 4, semester: '3' }],
       yalova: [{ code: 'BSM201', name: 'Veri Yapıları', credit: 3, ects: 5, language: 'TR', grade: null,
-        convertedGrade: null, topics: [{ text: 'Listeler', covered: true }, { text: 'Graflar', covered: false }] }],
+        convertedGrade: null, topics: [{ text: 'Listeler', covered: true }, { text: 'Graflar', covered: false }],
+        source: null, semester: null }],
     })
-    const input = toMatchInput(toEditMatch(saved))
+    // Listedeki 4. ders ekranda 77 numaralı satır; gönderirken 77 yine 4. sıraya döner.
+    const edit = toEditMatch(saved, (c) => (c.source === 4 ? 77 : -1))
+    expect(edit.incoming[0].sourceKey).toBe(77)
+    const input = toMatchInput(edit, (key) => (key === 77 ? 4 : -1))
     expect(input.counted).toBe(false)
-    expect(input.incoming[0]).toMatchObject({ name: 'Data Structures', credit: 3, ects: 5, grade: 'AA', language: 'EN' })
-    expect(input.incoming[0].topics).toEqual([{ text: 'Lists', covered: false }])
+    expect(input.incoming).toEqual([{ source: 4, topics: [{ text: 'Lists', covered: false }] }])
     expect(input.yalova[0].topics).toEqual([
       { text: 'Listeler', covered: true },
       { text: 'Graflar', covered: false },
     ])
+  })
+
+  it('listede olmayan derse bağlı karşı ders gönderilmez', () => {
+    const m = { ...emptyMatch(), incoming: [{ key: 1, sourceKey: 5, content: '' }] }
+    expect(toMatchInput(m, () => -1).incoming).toEqual([])
   })
 })
 
