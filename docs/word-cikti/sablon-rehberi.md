@@ -52,9 +52,12 @@ Her etiket için: işaretli örnek metnin tamamını sil, yerine etiketi **tek s
 | `{{s_akts}}` AKTS | `{{y_akts}}` |
 | `{{s_not}}` Harf notu | `{{y_not}}` Karşılık harf notu |
 
-Şablonda sağ taraftaki NOTU hücresi boş ve işaretsiz, ama form gereği doldurulacak (not dönüşümünden gelir), o yüzden etiket konmalı. Soldaki T ve U+L hücreleri de örnekte boş, ama etiket konmalı.
+Şablonda sağ taraftaki NOTU hücresi boş ve işaretsiz, ama form gereği doldurulacak (not dönüşümünden gelir), o yüzden
+etiket kondu (yanındaki AKTS hücresinin yazı biçimiyle). Soldaki T ve U+L hücreleri örnekte de boş ve transkriptte
+bu bilgi yok: `{{s_t}}` ve `{{s_u}}` konmadı, boş kalır (karar, bölüm 6).
 
-Çoklu eşleştirme (2 karşı kurum dersi, 1 Yalova dersi): her satır "bir sol + bir sağ" taşır. Fazla sol dersler için sağ hücreler boş bırakılır (veya ilk sağ ders tekrarlanmaz, boş kalır).
+Çoklu eşleştirme (2 karşı kurum dersi, 1 Yalova dersi): her satır bir sol ders taşır; sağdaki Yalova hücreleri
+dikey birleştirilir ve Yalova dersi bir kez yazılır (karar, bölüm 6).
 
 ### 3.4 İmza tablosu (2. tablo)
 
@@ -78,8 +81,34 @@ Değer, Ayarlar > Kullanıcılar ekranındaki "Ekranda görünen ad" metnidir (�
 - Sarı yazı + kırmızı vurgu çıktıda temizlenir (form yazdırılabilir görünsün diye), şablonda kalabilir.
 - Şablon dosyası projede `backend/src/main/resources/templates/intibak-sablon.docx` yoluna konur.
 
-## 6. Açık kararlar (hocaya/sana soru)
+## 6. Kararlar
 
-1. Komisyon üyelerinin adları form oluşturulurken mi, Word'e aktarırken mi yazılsın? Kayıt listesindeki "fatura mantığı" gibi aktarım anındaki adı kayda dondurmak daha güvenli.
-2. Kayıt türü listesi (DGS/YATAY GEÇİŞ/YÖS/ÖSS) formda hep tam liste mi kalsın, yoksa sadece seçilen mi yazılsın? Rehber "sadece seçilen" varsayıyor.
-3. Çoklu eşleştirmede satır birleştirme (dikey birleştirme) istenir mi, yoksa boş hücre yeterli mi?
+1. **İmzadaki adlar fiş mantığıyla:** Word'e aktarıldığı andaki görünen ad yazılır ve o çıktıda sabit kalır; üye
+   sonradan değişse de eski form değişmez (kayıt listesindeki "kaydı açan / son değiştiren" ile aynı mantık).
+2. **Sadece sayılan dersler:** Şablonun başlığı "KARŞILIK SAYILACAK DERSLER" / "MUAF SAYILACAK DERSLER"; komisyonun
+   "sayılmaz" dediği dersler Word'e girmez.
+3. **Çoklu eşleştirme:** Karşıdaki birden çok ders bizdeki bir derse sayılırsa sağdaki (Yalova) hücreler dikey olarak
+   birleştirilir, Yalova dersi tek büyük hücrede bir kez yazılır.
+4. **Karşı tarafın T ve U+L sütunları boş kalır:** Şablonun örneğinde de boş; transkriptlerde genelde sadece kredi ve
+   AKTS var. Bu yüzden bu iki hücreye etiket konmadı.
+
+## 7. Etiketli şablon (yapıldı)
+
+- Dosya: `backend/src/main/resources/templates/intibak-sablon.docx`. Kaynak: hocanın verdiği `İntibak Formu.docx`
+  (bayt bayt aynı iki kopya vardı).
+- Sadece `word/document.xml` değişti; diğer bütün parçalar (stiller, yazı tipleri, sayfa ayarı) orijinalle bayt bayt
+  aynı. Tablo özellikleri, sütun genişlikleri ve hücre ayarları aynı kaldı.
+- Örnek yazının olduğu parçaların yazısı etikete çevrildi, parçanın biçimi (yazı tipi, boyut, sarı yazı + kırmızı
+  vurgu) korundu. Vurgu, çıktı üretilirken temizlenecek.
+- 5 örnek ders satırından ilki etiketlendi, diğer 4'ü silindi (kod ilk satırı ders sayısı kadar çoğaltacak).
+- İmza tablosundaki üç ad etikete çevrildi (`{{baskanAd}}`, `{{uye1Ad}}`, `{{uye2Ad}}`); unvan satırı aynen kaldı.
+- Gizli belge bilgisindeki (docProps/core.xml) "son değiştiren" e-posta adresi silindi (repo GitHub'a gidecek;
+  görünen içeriği etkilemez).
+- **Kayıt türü satırına dokunulmadı:** "DİKEY GEÇİŞ / YATAY GEÇİŞ / YÖS / ÖSS" şablonda işaretli alan değil, sabit
+  yazı. Nasıl doldurulacağı hocadan gelecek geçiş türleri listesiyle birlikte netleşecek.
+
+## 8. Açık sorular (hocaya)
+
+1. Geçiş türleri listesi: şablonda DİKEY GEÇİŞ / YATAY GEÇİŞ / YÖS / ÖSS, sistemde Yatay, DGS, Af, YÖS, ÖSYS var.
+   Word'de kayıt türü nasıl gösterilecek (sadece seçilen mi, liste içinde işaretli mi)?
+2. Karşı dersin "Dersin ait olduğu yarıyıl" bilgisi transkriptten girilecek; formda bunun için alan yok (eklenecek).
