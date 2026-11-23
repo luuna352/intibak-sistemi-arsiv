@@ -139,6 +139,40 @@ class MatchCalculatorTest {
         assertThat(MatchCalculator.evaluate(turkish, ROWS, PrepStatus.NOT_TAKEN, TR).suggestCounted()).isTrue();
     }
 
+    private static MatchCalculator.CourseIn named(String name) {
+        return new MatchCalculator.CourseIn(null, name, new BigDecimal("3"), null, CourseLanguage.TR, "92");
+    }
+
+    @Test
+    void sameNameAndCommonCoursesAreDirectAcceptOthersGoToContent() {
+        // Ad sadeleştirme: harf büyüklüğü, boşluk, noktalama ve sondaki Roma rakamı fark etmez.
+        assertThat(MatchCalculator.normalizeName("  Veri   Yapıları ")).isEqualTo("veri yapıları");
+        assertThat(MatchCalculator.normalizeName("FİZİK - II")).isEqualTo(MatchCalculator.normalizeName("fizik 2"));
+        assertThat(MatchCalculator.normalizeName("Fizik I")).isEqualTo("fizik 1");
+        assertThat(MatchCalculator.normalizeName("Fizik I")).isNotEqualTo(MatchCalculator.normalizeName("Fizik II"));
+
+        // Kural 4: aynı ad (Türkçe büyük İ ile).
+        assertThat(MatchCalculator.basis(new MatchCalculator.MatchIn(true, List.of(named("VERİ YAPILARI")),
+                List.of(named("Veri Yapıları"))))).isEqualTo(MatchBasis.SAME_NAME);
+        // Kural 3: Türk Dili / tarih dersi, ad farklı olsa da doğrudan kabul.
+        assertThat(MatchCalculator.basis(new MatchCalculator.MatchIn(true, List.of(named("Türkçe I")),
+                List.of(named("Türk Dili 1"))))).isEqualTo(MatchBasis.COMMON_COURSE);
+        assertThat(MatchCalculator.basis(new MatchCalculator.MatchIn(true, List.of(named("Tarih")),
+                List.of(named("Atatürk İlkeleri ve İnkılap Tarihi I"))))).isEqualTo(MatchBasis.COMMON_COURSE);
+        // Kural 5: ad farklı (dil farkı da adı değiştirir) -> içerik karşılaştırması.
+        assertThat(MatchCalculator.basis(new MatchCalculator.MatchIn(true, List.of(named("Data Structures")),
+                List.of(named("Veri Yapıları"))))).isEqualTo(MatchBasis.CONTENT);
+        // Birden çok Yalova dersi: hepsinin karşı tarafta aynı adlı dersi olmalı.
+        assertThat(MatchCalculator.basis(new MatchCalculator.MatchIn(true,
+                List.of(named("Fizik 1"), named("Fizik Lab")), List.of(named("Fizik I"), named("Fizik Lab")))))
+                .isEqualTo(MatchBasis.SAME_NAME);
+        assertThat(MatchCalculator.basis(new MatchCalculator.MatchIn(true, List.of(named("Fizik 1")),
+                List.of(named("Fizik I"), named("Fizik Laboratuvarı"))))).isEqualTo(MatchBasis.CONTENT);
+        // Bir taraf boşsa değerlendirme yok.
+        assertThat(MatchCalculator.basis(new MatchCalculator.MatchIn(true, List.of(), List.of(named("X")))))
+                .isNull();
+    }
+
     @Test
     void placementThresholds() {
         assertThat(MatchCalculator.place(new BigDecimal("29.5"), TransferType.YATAY).classLevel()).isEqualTo(1);

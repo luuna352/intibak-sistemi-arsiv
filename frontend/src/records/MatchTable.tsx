@@ -60,6 +60,11 @@ export default function MatchTable({ matches, onChange, results, planCourses, di
               <Typography variant="subtitle2">{i + 1}. eşleştirme</Typography>
               {r?.grade && <Chip size="small" color="primary" label={`Yalova notu: ${r.grade}`} />}
               {r && <Chip size="small" label={`Yalova kredisi: ${r.yalovaCredit}`} />}
+              {/* Kural 3-4 doğrudan kabul (yeşil); kural 5 içerik karşılaştırması, kararı komisyon verir (mavi). */}
+              {r?.basisLabel && (
+                <Chip size="small" variant="outlined" label={r.basisLabel}
+                  color={r.basis === 'CONTENT' ? 'info' : 'success'} />
+              )}
               <Box sx={{ flex: 1 }} />
               <FormControlLabel
                 label="Sayıldı mı?"

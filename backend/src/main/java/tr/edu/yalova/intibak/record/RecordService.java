@@ -62,10 +62,12 @@ public class RecordService {
 
     /**
      * Eşleştirme satırı ve hesap sonucu: birleşik not, Yalova kredisi, eksik bilgiler (problems: satır sayılamaz),
-     * kural önerileri (warnings: komisyon yine de sayabilir) ve sistemin "sayılsın mı" önerisi.
+     * kural önerileri (warnings: komisyon yine de sayabilir), sistemin "sayılsın mı" önerisi ve satırın hangi
+     * kuralla değerlendirildiği (basis: Türk Dili / tarih, aynı ad ya da içerik karşılaştırması).
      */
     public record MatchView(boolean counted, List<CourseView> incoming, List<CourseView> yalova, YalovaGrade grade,
-            BigDecimal yalovaCredit, List<String> problems, List<String> warnings, boolean suggestCounted) {
+            BigDecimal yalovaCredit, List<String> problems, List<String> warnings, boolean suggestCounted,
+            MatchBasis basis, String basisLabel) {
     }
 
     /** Formun hesap kısmı: satırların sonucu ve yerleşim (sayılan kredi, sınıf, dönem, gerekçe). */
@@ -361,7 +363,7 @@ public class RecordService {
             }
             List<CourseView> yalova = in.yalova().stream().map(c -> view(c, null)).toList();
             views.add(new MatchView(in.counted(), incoming, yalova, r.grade(), r.yalovaCredit(), r.problems(),
-                    r.warnings(), r.suggestCounted()));
+                    r.warnings(), r.suggestCounted(), r.basis(), r.basis() == null ? null : r.basis().label()));
         }
         return new Evaluation(views, result.placement());
     }

@@ -88,6 +88,9 @@ export type MatchView = {
   warnings: string[]
   // Sistemin önerisi: eksik bilgi ve kural uyarısı yoksa true.
   suggestCounted: boolean
+  // Hangi kural: Türk Dili / tarih ve aynı ad doğrudan kabul, ad farklıysa içerik karşılaştırması (kural 3-5).
+  basis: 'COMMON_COURSE' | 'SAME_NAME' | 'CONTENT' | null
+  basisLabel: string | null
 }
 
 export type Placement = { countedCredit: number; classLevel: number; semester: number; reason: string }

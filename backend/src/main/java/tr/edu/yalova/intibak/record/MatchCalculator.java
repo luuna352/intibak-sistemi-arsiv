@@ -6,8 +6,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import tr.edu.yalova.intibak.curriculum.CourseLanguage;
 import tr.edu.yalova.intibak.grade.GradeTableRow;
@@ -28,6 +30,12 @@ final class MatchCalculator {
     private static final Locale TR = Locale.forLanguageTag("tr");
     // Bu notlarla ders muaf sayılmaz (başarısız / devamsız).
     private static final Set<YalovaGrade> FAILING = Set.of(YalovaGrade.FD, YalovaGrade.FF, YalovaGrade.DZ);
+    // Kural 3: adında bunlardan biri geçen Yalova dersi Türk Dili / tarih dersidir (doğrudan kabul).
+    private static final List<String> COMMON_COURSE_WORDS = List.of("türk dili", "atatürk", "inkılap", "inkilap");
+    // Ad karşılaştırmasında sondaki Roma rakamı sayıya çevrilir ("Fizik II" = "Fizik 2"). Türkçe küçük harfte
+    // "I" -> "ı" olduğu için iki yazım da var.
+    private static final Map<String, String> ROMAN = Map.of(
+            "i", "1", "ı", "1", "ii", "2", "ıı", "2", "iii", "3", "ııı", "3", "iv", "4", "ıv", "4");
     // Sınıf eşikleri (sayılan toplam kredi): < 30 -> 1. sınıf, 30-60 -> 2. sınıf, > 60 -> 3. sınıf.
     static final BigDecimal SECOND_CLASS_FROM = new BigDecimal("30");
     static final BigDecimal THIRD_CLASS_ABOVE = new BigDecimal("60");
@@ -49,7 +57,7 @@ final class MatchCalculator {
      * (warnings: sistem "sayılmaz" önerir, karar komisyonun).
      */
     record MatchResult(List<YalovaGrade> incomingGrades, YalovaGrade grade, BigDecimal yalovaCredit,
-            List<String> problems, List<String> warnings) {
+            List<String> problems, List<String> warnings, MatchBasis basis) {
 
         /** Sistemin önerisi: eksik bilgi ve kural uyarısı yoksa "sayılsın". */
         boolean suggestCounted() {
@@ -134,7 +142,46 @@ final class MatchCalculator {
         BigDecimal yalovaCredit = match.yalova().stream()
                 .map(CourseIn::credit).filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new MatchResult(grades, grade, yalovaCredit, problems, warnings);
+        return new MatchResult(grades, grade, yalovaCredit, problems, warnings, basis(match));
+    }
+
+    /**
+     * Satır hangi kuralla değerlendirilir (kural 3, 4, 5)? İki taraftan biri boşsa null. Satırdaki bütün Yalova
+     * dersleri Türk Dili / tarih dersiyse ortak ders; her Yalova dersinin karşı tarafta aynı adlı bir dersi varsa
+     * aynı ad; değilse içerik karşılaştırması (kararı komisyon verir).
+     */
+    static MatchBasis basis(MatchIn match) {
+        if (match.incoming().isEmpty() || match.yalova().isEmpty()) {
+            return null;
+        }
+        if (match.yalova().stream().allMatch(c -> isCommonCourse(c.name()))) {
+            return MatchBasis.COMMON_COURSE;
+        }
+        Set<String> incomingNames = match.incoming().stream()
+                .map(c -> normalizeName(c.name())).collect(Collectors.toSet());
+        if (match.yalova().stream().allMatch(c -> incomingNames.contains(normalizeName(c.name())))) {
+            return MatchBasis.SAME_NAME;
+        }
+        return MatchBasis.CONTENT;
+    }
+
+    static boolean isCommonCourse(String name) {
+        String normalized = normalizeName(name);
+        return COMMON_COURSE_WORDS.stream().anyMatch(normalized::contains);
+    }
+
+    /**
+     * Ad karşılaştırması için sadeleştirir: Türkçe küçük harf, noktalama yerine boşluk, fazla boşluklar tek boşluk,
+     * sondaki I/II/III/IV sayıya çevrilir. "Fizik - II" ve "fizik 2" aynı sonucu verir. Kelime farkı aynı sayılmaz.
+     */
+    static String normalizeName(String name) {
+        if (name == null) {
+            return "";
+        }
+        String[] words = name.toLowerCase(TR).replaceAll("[^\\p{L}\\p{N}]+", " ").trim().split(" ");
+        String last = words[words.length - 1];
+        words[words.length - 1] = ROMAN.getOrDefault(last, last);
+        return String.join(" ", words);
     }
 
     /**
