@@ -68,7 +68,25 @@ sayılamaz (eksik bilgi). "Sayıldı mı?" kutusu satırı silmeden sayımdan ç
 - **A3 (yapıldı):** öğrencinin ders içerik belgesi: formda PDF/DOCX yükleme; belge saklanmaz, bölümleri sadece sayfa
   açıkken durur. İçerik karşılaştırmasında "Belgede bul" (dersin adı bölüm başlığında aranır) ya da listeden bölüm
   seçme; seçilen bölüm karşı dersin içerik kutusuna kopyalanır, kayda sadece o gider. Taranmış (resim) PDF ve eski
-  .doc okunmaz; içerik elle yapıştırılır. Yapay zekâ/internet kullanılmaz (KVKK).
+  .doc okunmaz; içerik elle yapıştırılır. Yapay zekâ/internet kullanılmaz (KVKK). (A4 ile belge artık saklanıyor.)
+- **A4 (yapıldı):** her kayıtta bir transkript ve bir ders içerik belgesi saklanır (V13, `intibak_document`, PDF/DOCX,
+  en fazla 30 MB; aynı türden yenisi eskisinin yerine geçer). İçerikler transkriptin içindeyse "Ders içerikleri
+  transkriptin içinde" işaretlenir, ayrı içerik belgesi istenmez ve "Belgede bul" transkriptte arar. Yeni kayıtta
+  seçilen dosyalar "Kaydet" ile kayıt oluşunca yüklenir.
+
+## Bir öğrencinin birden çok kaydı (23 Kasım kararı)
+
+- Öğrenci birden çok yatay geçiş yaptıysa (ör. 1. üniversite → 2. üniversite → Yalova) **her önceki üniversite ayrı
+  kayıttır**. Kayıt sayısında sınır yok.
+- **Her kaydın bir Word çıktısı olur.** O Word sadece Yalova ile o kaydın üniversitesini karşılaştırır ve sadece
+  sayılan dersleri listeler.
+- Formda aynı TC'li diğer kayıtlar gösterilir (kaydı ve transkripti açma bağlantısıyla).
+- **BL notu:** önceki üniversitenin notsuz geçirdiği ders. Gerçek harf notu öğrencinin önceki kaydının
+  transkriptinden yazılır; formda "BL" yazılınca bu hatırlatılır.
+- **İleride (karar verildi, nasıl yapılacağı belli değil):** böyle durumlarda **iki kaydın sayılan kredileri
+  toplanarak** yerleşim (sınıf/dönem) bulunacak. Bunun için ayrı bir sayfa mı yoksa formda bir toplam mı
+  gerektiği henüz belli değil. Şimdilik her kayıt yerleşimi kendi kredisiyle önerir; komisyon yerleşimi formda
+  elle değiştirebilir.
 
 ## Teyit edilecekler
 
@@ -84,4 +102,5 @@ Bunlar hocanın ses kaydı özetinden (23 Kasım) ya da Senato Esasları'ndan ge
 3. **Sabit eşik (Senato Esasları 5/h: %75):** kullanıcı "eşik yok, komisyon karar versin" dedi.
 4. **Kredi kuralı (Senato Esasları 5/g, 5/j):** sonra.
 5. **Girilen notlara göre PT tablosu önerisi (hoca özeti):** 87 → PT1, A- → PT2, B1 → PT3.
-6. **Sadece sayılan dersler Word formuna yazılır (hoca özeti):** Word adımında sorulacak.
+6. ~~Sadece sayılan dersler Word formuna yazılır~~: karar verildi (şablonun başlığı "KARŞILIK SAYILACAK DERSLER");
+   ayrıntı `docs/word-cikti/sablon-rehberi.md` bölüm 6.
