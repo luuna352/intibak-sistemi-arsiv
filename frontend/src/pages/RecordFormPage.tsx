@@ -14,6 +14,8 @@ import { api } from '../api/client'
 import GradeTablePreview from '../records/GradeTablePreview'
 import MatchTable from '../records/MatchTable'
 import {
+  DEPARTMENT_LANGUAGE_OPTIONS,
+  PREP_OPTIONS,
   applySuggestions,
   statusColor,
   toEditMatch,
@@ -51,8 +53,19 @@ type Form = {
   university: string
   facultyDepartment: string
   registrationDate: string
+  prepStatus: string
+  departmentLanguage: string
 }
-const EMPTY: Form = { tcNo: '', fullName: '', transferType: '', university: '', facultyDepartment: '', registrationDate: '' }
+const EMPTY: Form = {
+  tcNo: '',
+  fullName: '',
+  transferType: '',
+  university: '',
+  facultyDepartment: '',
+  registrationDate: '',
+  prepStatus: 'UNKNOWN',
+  departmentLanguage: 'UNKNOWN',
+}
 
 const toForm = (d: RecordDetail): Form => ({
   tcNo: d.tcNo,
@@ -61,6 +74,8 @@ const toForm = (d: RecordDetail): Form => ({
   university: d.university ?? '',
   facultyDepartment: d.facultyDepartment ?? '',
   registrationDate: d.registrationDate ?? '',
+  prepStatus: d.prepStatus,
+  departmentLanguage: d.departmentLanguage,
 })
 
 // Yeni intibak formu (/yeni-form) ve var olan kaydın formu (/kayitlar/:id): öğrenci bilgileri, ders eşleştirme,
@@ -131,6 +146,9 @@ export default function RecordFormPage() {
         method: 'POST',
         body: {
           transferType: form.transferType || null,
+          // Hazırlık şartı (kural 2b) önizlemede de hesaba girer.
+          prepStatus: form.prepStatus,
+          departmentLanguage: form.departmentLanguage,
           gradeTableId: gradeTableId === '' ? null : Number(gradeTableId),
           matches: matches.map(toMatchInput),
         },
@@ -145,7 +163,7 @@ export default function RecordFormPage() {
         })
     }, 500)
     return () => clearTimeout(timer)
-  }, [form.transferType, gradeTableId, matches])
+  }, [form.transferType, form.prepStatus, form.departmentLanguage, gradeTableId, matches])
 
   // Geçerli sınıf: komisyon karar verdiyse o, vermediyse sistemin önerisi. Plan önerisi bu sınıfa göre yapılır.
   const decided = PLACEMENTS.find((p) => p.value === placementChoice)
@@ -261,6 +279,24 @@ export default function RecordFormPage() {
             {types.map((t) => (
               <MenuItem key={t.value} value={t.value}>
                 {t.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          {/* Kural 2b: karşı ders İngilizceyse bu iki bilgiden biri şartı sağlamalı (transkriptte yazar). */}
+          <TextField select label="İngilizce hazırlık" value={form.prepStatus} onChange={set('prepStatus')}
+            disabled={cancelled} helperText="Sınavla muaf olan da 'Geçti' sayılır">
+            {PREP_OPTIONS.map((o) => (
+              <MenuItem key={o.value} value={o.value}>
+                {o.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField select label="Geldiği bölümün eğitim dili" value={form.departmentLanguage}
+            onChange={set('departmentLanguage')} disabled={cancelled}
+            helperText="En az %30 İngilizceyse hazırlık şartı aranmaz">
+            {DEPARTMENT_LANGUAGE_OPTIONS.map((o) => (
+              <MenuItem key={o.value} value={o.value}>
+                {o.label}
               </MenuItem>
             ))}
           </TextField>

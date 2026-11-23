@@ -45,6 +45,15 @@ public class IntibakRecord {
     @Column(name = "registration_date")
     private LocalDate registrationDate;
 
+    // Kural 2b (V9): İngilizce hazırlık durumu ve geldiği bölümün eğitim dili.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "prep_status", nullable = false, length = 20)
+    private PrepStatus prepStatus = PrepStatus.UNKNOWN;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "department_language", nullable = false, length = 20)
+    private DepartmentLanguage departmentLanguage = DepartmentLanguage.UNKNOWN;
+
     // Değerlendirmede kullanılan not dönüşüm tablosu (PT) ve Yalova ders planı. Sadece id tutulur; plan silinse de
     // eşleştirilen Yalova dersleri aşağıdaki satırlarda metin olarak durur.
     @Column(name = "grade_table_id")
@@ -98,7 +107,8 @@ public class IntibakRecord {
 
     /** Öğrenci bilgileri; kayıt açarken ve değiştirirken aynı alanlar gelir. */
     public record StudentInfo(String tcNo, String fullName, TransferType transferType, String university,
-            String facultyDepartment, LocalDate registrationDate) {
+            String facultyDepartment, LocalDate registrationDate, PrepStatus prepStatus,
+            DepartmentLanguage departmentLanguage) {
     }
 
     /** Bilgileri değiştirir; kayıt "Değiştiriliyor" durumuna geçer (Word'e aktarılmış olsa bile yeniden aktarılmalı). */
@@ -150,6 +160,8 @@ public class IntibakRecord {
         this.university = info.university();
         this.facultyDepartment = info.facultyDepartment();
         this.registrationDate = info.registrationDate();
+        this.prepStatus = info.prepStatus();
+        this.departmentLanguage = info.departmentLanguage();
     }
 
     private void touch(String actorName, Instant now) {
@@ -183,6 +195,14 @@ public class IntibakRecord {
 
     public LocalDate getRegistrationDate() {
         return registrationDate;
+    }
+
+    public PrepStatus getPrepStatus() {
+        return prepStatus;
+    }
+
+    public DepartmentLanguage getDepartmentLanguage() {
+        return departmentLanguage;
     }
 
     public Long getGradeTableId() {

@@ -46,7 +46,7 @@ class RecordServiceTest {
 
     private static RecordService.Input input(String tc, String name) {
         return new RecordService.Input(tc, name, TransferType.YATAY, " Ankara Üniversitesi ", "",
-                LocalDate.of(2026, 9, 15), null, null, List.of(), null, null, true);
+                LocalDate.of(2026, 9, 15), null, null, null, null, List.of(), null, null, true);
     }
 
     private IntibakRecord existing() {
@@ -85,7 +85,8 @@ class RecordServiceTest {
         assertThatThrownBy(() -> RecordService.validate(input(VALID_TC, " ")))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("Ad-soyad");
         assertThatThrownBy(() -> RecordService.validate(
-                new RecordService.Input(VALID_TC, "Ayşe", null, null, null, null, null, null, null, null, null, true)))
+                new RecordService.Input(VALID_TC, "Ayşe", null, null, null, null, null, null, null, null, null, null, null,
+                        true)))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("Geçiş türü");
     }
 
@@ -131,7 +132,7 @@ class RecordServiceTest {
     @Test
     void saveNeedsConfirmation() {
         RecordService.Input notConfirmed = new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY, null, null,
-                null, null, null, List.of(), null, null, false);
+                null, null, null, null, null, List.of(), null, null, false);
 
         assertThatThrownBy(() -> service.create(notConfirmed, "x"))
                 .isInstanceOf(BadRequestException.class)
@@ -153,7 +154,7 @@ class RecordServiceTest {
                         new BigDecimal("31"), new BigDecimal("7"), CourseLanguage.EN, null)));
 
         RecordService.Detail saved = service.create(new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY,
-                null, null, null, 1L, null, List.of(match), null, null, true), "Üye 1");
+                null, null, null, PrepStatus.PASSED, DepartmentLanguage.TR, 1L, null, List.of(match), null, null, true), "Üye 1");
 
         RecordService.MatchView view = saved.evaluation().matches().get(0);
         assertThat(view.incoming().get(0).convertedGrade()).isEqualTo(YalovaGrade.AA);
@@ -165,7 +166,7 @@ class RecordServiceTest {
                 List.of(new RecordService.CourseInput(null, "Programlama", null, null, CourseLanguage.TR, "95")),
                 match.yalova());
         RecordService.MatchView warned = service.create(new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY,
-                null, null, null, 1L, null, List.of(turkish), null, null, true), "x").evaluation().matches().get(0);
+                null, null, null, PrepStatus.PASSED, DepartmentLanguage.TR, 1L, null, List.of(turkish), null, null, true), "x").evaluation().matches().get(0);
         assertThat(warned.counted()).isTrue();
         assertThat(warned.suggestCounted()).isFalse();
         assertThat(warned.warnings()).anyMatch(w -> w.contains("Eğitim dili farklı"));
@@ -175,7 +176,7 @@ class RecordServiceTest {
                 List.of(new RecordService.CourseInput(null, "Programlama", null, null, CourseLanguage.EN, "")),
                 match.yalova());
         assertThatThrownBy(() -> service.create(new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY,
-                null, null, null, 1L, null, List.of(noGrade), null, null, true), "x"))
+                null, null, null, PrepStatus.PASSED, DepartmentLanguage.TR, 1L, null, List.of(noGrade), null, null, true), "x"))
                 .hasMessageContaining("1. satır sayılamaz");
     }
 
@@ -183,7 +184,7 @@ class RecordServiceTest {
     void commissionCanOverrideSuggestedPlacement() {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         RecordService.Input decided = new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY, null, null, null,
-                null, null, List.of(), 2, 4, true);
+                null, null, null, null, List.of(), 2, 4, true);
 
         // Sistem 0 krediyle 1. sınıf önerir; komisyonun 2. sınıf 4. dönem kararı ayrıca saklanır.
         RecordService.Detail saved = service.create(decided, "Üye 1");

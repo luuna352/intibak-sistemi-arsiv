@@ -7,6 +7,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import static tr.edu.yalova.intibak.record.DepartmentLanguage.TR;
+import static tr.edu.yalova.intibak.record.PrepStatus.PASSED;
+
 import tr.edu.yalova.intibak.curriculum.CourseLanguage;
 import tr.edu.yalova.intibak.grade.GradeTableRow;
 import tr.edu.yalova.intibak.grade.YalovaGrade;
@@ -67,14 +70,14 @@ class MatchCalculatorTest {
         // AA (4.0, 3 kredi) + BB (3.0, 3 kredi) = 3.5 -> BA.
         MatchCalculator.MatchResult equal = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
                 List.of(incoming("92", "3", CourseLanguage.TR), incoming("BB", "3", CourseLanguage.TR)),
-                List.of(yalova("5", CourseLanguage.TR))), ROWS);
+                List.of(yalova("5", CourseLanguage.TR))), ROWS, PASSED, TR);
         assertThat(equal.grade()).isEqualTo(YalovaGrade.BA);
         assertThat(equal.incomingGrades()).containsExactly(YalovaGrade.AA, YalovaGrade.BB);
 
         // BB (3.0) + CB (2.5), eşit kredi = 2.75: BB ile CB arasında, öğrenci lehine BB.
         MatchCalculator.MatchResult between = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
                 List.of(incoming("BB", "2", CourseLanguage.TR), incoming("CB", "2", CourseLanguage.TR)),
-                List.of(yalova("4", CourseLanguage.TR))), ROWS);
+                List.of(yalova("4", CourseLanguage.TR))), ROWS, PASSED, TR);
         assertThat(between.grade()).isEqualTo(YalovaGrade.BB);
     }
 
@@ -82,21 +85,21 @@ class MatchCalculatorTest {
     void rulesOnlySuggestButMissingDataBlocks() {
         // Kural uyarıları (dil farkı, başarısız not): sistem "sayılmaz" önerir, eksik bilgi değildir.
         MatchCalculator.MatchResult language = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
-                List.of(incoming("92", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.EN))), ROWS);
+                List.of(incoming("92", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.EN))), ROWS, PASSED, TR);
         assertThat(language.warnings()).anyMatch(p -> p.contains("Eğitim dili farklı"));
         assertThat(language.problems()).isEmpty();
         assertThat(language.suggestCounted()).isFalse();
 
         MatchCalculator.MatchResult failing = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
-                List.of(incoming("30", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR))), ROWS);
+                List.of(incoming("30", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR))), ROWS, PASSED, TR);
         assertThat(failing.warnings()).anyMatch(p -> p.contains("Başarısız"));
 
         MatchCalculator.MatchResult noTable = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
-                List.of(incoming("92", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR))), null);
+                List.of(incoming("92", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR))), null, PASSED, TR);
         assertThat(noTable.problems()).anyMatch(p -> p.contains("PT"));
 
         MatchCalculator.MatchResult noGrade = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
-                List.of(incoming("", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR))), ROWS);
+                List.of(incoming("", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR))), ROWS, PASSED, TR);
         assertThat(noGrade.problems()).anyMatch(p -> p.contains("not girilmedi"));
 
         // Komisyon dil uyarılı satırı (4) bilerek saydı: krediye girer. Eksik bilgili satır (5) girmez,
@@ -109,8 +112,31 @@ class MatchCalculatorTest {
                 new MatchCalculator.MatchIn(false, List.of(incoming("92", "4", CourseLanguage.TR)),
                         List.of(yalova("3", CourseLanguage.TR))),
                 new MatchCalculator.MatchIn(true, List.of(incoming("XY", "4", CourseLanguage.TR)),
-                        List.of(yalova("5", CourseLanguage.TR)))), ROWS, TransferType.YATAY);
+                        List.of(yalova("5", CourseLanguage.TR)))), ROWS, TransferType.YATAY, PASSED, TR);
         assertThat(evaluation.placement().countedCredit()).isEqualByComparingTo("10");
+    }
+
+    @Test
+    void englishCourseNeedsPreparationOrEnglishDepartment() {
+        // Kural 2b: hazırlığı geçmiş ya da bölümü en az %30 İngilizce ise şart tutar.
+        assertThat(MatchCalculator.englishCondition(PASSED, TR)).isNull();
+        assertThat(MatchCalculator.englishCondition(PrepStatus.NOT_TAKEN, DepartmentLanguage.EN30)).isNull();
+        assertThat(MatchCalculator.englishCondition(PrepStatus.UNKNOWN, DepartmentLanguage.EN100)).isNull();
+        // İkisi de yok: sayılmaz önerisi; bilgi eksikse bilgi istenir.
+        assertThat(MatchCalculator.englishCondition(PrepStatus.NOT_TAKEN, TR)).contains("hazırlığı geçmemiş");
+        assertThat(MatchCalculator.englishCondition(PrepStatus.UNKNOWN, TR)).contains("girilmeli");
+        assertThat(MatchCalculator.englishCondition(PrepStatus.NOT_TAKEN, DepartmentLanguage.UNKNOWN))
+                .contains("girilmeli");
+
+        // Sadece karşı ders İngilizceyse aranır; Türkçe karşı derste uyarı yok.
+        MatchCalculator.MatchIn english = new MatchCalculator.MatchIn(true,
+                List.of(incoming("92", "4", CourseLanguage.EN)), List.of(yalova("4", CourseLanguage.TR)));
+        MatchCalculator.MatchIn turkish = new MatchCalculator.MatchIn(true,
+                List.of(incoming("92", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR)));
+        assertThat(MatchCalculator.evaluate(english, ROWS, PrepStatus.NOT_TAKEN, TR).warnings())
+                .anyMatch(w -> w.contains("Hazırlık şartı"));
+        assertThat(MatchCalculator.evaluate(english, ROWS, PASSED, TR).suggestCounted()).isTrue();
+        assertThat(MatchCalculator.evaluate(turkish, ROWS, PrepStatus.NOT_TAKEN, TR).suggestCounted()).isTrue();
     }
 
     @Test

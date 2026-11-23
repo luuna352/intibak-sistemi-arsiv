@@ -73,7 +73,8 @@ public class RecordService {
     }
 
     public record Detail(Long id, String tcNo, String fullName, TransferType transferType, String transferTypeLabel,
-            String university, String facultyDepartment, LocalDate registrationDate, RecordStatus status,
+            String university, String facultyDepartment, LocalDate registrationDate, PrepStatus prepStatus,
+            DepartmentLanguage departmentLanguage, RecordStatus status,
             String statusLabel, String createdByName, Instant createdAt, String updatedByName, Instant updatedAt,
             Long gradeTableId, Long planId, Evaluation evaluation, Integer placementClassLevel,
             Integer placementSemester) {
@@ -93,8 +94,8 @@ public class RecordService {
      * sınıf/dönem kararı; ikisi de boşsa sistemin önerisi geçerlidir.
      */
     public record Input(String tcNo, String fullName, TransferType transferType, String university,
-            String facultyDepartment, LocalDate registrationDate, Long gradeTableId, Long planId,
-            List<MatchInput> matches, Integer placementClassLevel, Integer placementSemester, Boolean confirmed) {
+            String facultyDepartment, LocalDate registrationDate, PrepStatus prepStatus,
+            DepartmentLanguage departmentLanguage, Long gradeTableId, Long planId, List<MatchInput> matches, Integer placementClassLevel, Integer placementSemester, Boolean confirmed) {
     }
 
     /** Açılır liste seçeneği: {"value": "YATAY", "label": "Yatay geçiş"}. */
@@ -137,7 +138,7 @@ public class RecordService {
         List<MatchInput> matches = input == null || input.matches() == null ? List.of() : input.matches();
         List<MatchCalculator.MatchIn> ins = matches.stream().map(RecordService::lenient).toList();
         return evaluation(ins, rowsOf(input == null ? null : input.gradeTableId()),
-                input == null ? null : input.transferType());
+                input == null ? null : input.transferType(), prepOf(input), departmentOf(input));
     }
 
     @Transactional
@@ -243,7 +244,8 @@ public class RecordService {
         // Dil farkı, başarısız not gibi kural uyarıları kaydı engellemez; komisyon bilerek sayabilir (kural 8).
         List<GradeTableRow> rows = rowsOf(in.gradeTableId());
         for (int i = 0; i < ins.size(); i++) {
-            MatchCalculator.MatchResult result = MatchCalculator.evaluate(ins.get(i), rows);
+            MatchCalculator.MatchResult result = MatchCalculator.evaluate(ins.get(i), rows, info.prepStatus(),
+                    info.departmentLanguage());
             if (ins.get(i).counted() && !result.problems().isEmpty()) {
                 throw new BadRequestException("Eşleştirme " + (i + 1) + ". satır sayılamaz: "
                         + String.join(" ", result.problems()));
@@ -271,7 +273,16 @@ public class RecordService {
         return new IntibakRecord.StudentInfo(tc, fullName, in.transferType(),
                 text(in.university(), 200, "Geldiği üniversite"),
                 text(in.facultyDepartment(), 300, "Fakülte / bölüm"),
-                in.registrationDate());
+                in.registrationDate(), prepOf(in), departmentOf(in));
+    }
+
+    // Hazırlık ve bölüm dili seçilmemişse "Bilinmiyor" sayılır (kural 2b: o zaman bilgi istenir).
+    private static PrepStatus prepOf(Input in) {
+        return in == null || in.prepStatus() == null ? PrepStatus.UNKNOWN : in.prepStatus();
+    }
+
+    private static DepartmentLanguage departmentOf(Input in) {
+        return in == null || in.departmentLanguage() == null ? DepartmentLanguage.UNKNOWN : in.departmentLanguage();
     }
 
     // Kaydedilecek ders: ad zorunlu, sayılar 0-999.9 ve en fazla 1 ondalık, dil boşsa TR.
@@ -338,8 +349,8 @@ public class RecordService {
 
     // Hesap sonucunu ekrana gidecek biçime çevirir (her karşı dersin yanına Yalova karşılığı eklenir).
     private static Evaluation evaluation(List<MatchCalculator.MatchIn> ins, List<GradeTableRow> rows,
-            TransferType transferType) {
-        MatchCalculator.Evaluation result = MatchCalculator.evaluate(ins, rows, transferType);
+            TransferType transferType, PrepStatus prep, DepartmentLanguage department) {
+        MatchCalculator.Evaluation result = MatchCalculator.evaluate(ins, rows, transferType, prep, department);
         List<MatchView> views = new ArrayList<>();
         for (int i = 0; i < ins.size(); i++) {
             MatchCalculator.MatchIn in = ins.get(i);
@@ -385,9 +396,11 @@ public class RecordService {
                 .map(m -> new MatchCalculator.MatchIn(m.isCounted(), toCalc(m.getCourses(), MatchSide.INCOMING),
                         toCalc(m.getCourses(), MatchSide.YALOVA)))
                 .toList();
-        Evaluation evaluation = evaluation(ins, rowsOf(r.getGradeTableId()), r.getTransferType());
+        Evaluation evaluation = evaluation(ins, rowsOf(r.getGradeTableId()), r.getTransferType(), r.getPrepStatus(),
+                r.getDepartmentLanguage());
         return new Detail(r.getId(), r.getTcNo(), r.getFullName(), r.getTransferType(), r.getTransferType().label(),
-                r.getUniversity(), r.getFacultyDepartment(), r.getRegistrationDate(), r.getStatus(),
+                r.getUniversity(), r.getFacultyDepartment(), r.getRegistrationDate(), r.getPrepStatus(),
+                r.getDepartmentLanguage(), r.getStatus(),
                 r.getStatus().label(), r.getCreatedByName(), r.getCreatedAt(), r.getUpdatedByName(),
                 r.getUpdatedAt(), r.getGradeTableId(), r.getPlanId(), evaluation, r.getPlacementClassLevel(),
                 r.getPlacementSemester());

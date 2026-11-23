@@ -26,6 +26,8 @@ export type RecordDetail = {
   university: string | null
   facultyDepartment: string | null
   registrationDate: string | null
+  prepStatus: PrepStatus
+  departmentLanguage: DepartmentLanguage
   status: RecordStatus
   statusLabel: string
   createdByName: string
@@ -33,6 +35,21 @@ export type RecordDetail = {
   updatedByName: string | null
   updatedAt: string | null
 }
+
+// Kural 2b: İngilizce karşı dersin sayılması için hazırlık geçilmiş ya da bölüm en az %30 İngilizce olmalı.
+export type PrepStatus = 'PASSED' | 'NOT_TAKEN' | 'UNKNOWN'
+export type DepartmentLanguage = 'TR' | 'EN30' | 'EN100' | 'UNKNOWN'
+export const PREP_OPTIONS: { value: PrepStatus; label: string }[] = [
+  { value: 'UNKNOWN', label: 'Bilinmiyor' },
+  { value: 'PASSED', label: 'Geçti / sınavla muaf' },
+  { value: 'NOT_TAKEN', label: 'Okumadı / geçemedi' },
+]
+export const DEPARTMENT_LANGUAGE_OPTIONS: { value: DepartmentLanguage; label: string }[] = [
+  { value: 'UNKNOWN', label: 'Bilinmiyor' },
+  { value: 'TR', label: 'Türkçe' },
+  { value: 'EN30', label: '%30 İngilizce' },
+  { value: 'EN100', label: '%100 İngilizce' },
+]
 
 // Durum etiketinin rengi: MUI Chip renk adları.
 export const statusColor: Record<RecordStatus, 'info' | 'warning' | 'default' | 'success'> = {

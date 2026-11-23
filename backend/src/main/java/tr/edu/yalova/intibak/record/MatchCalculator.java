@@ -64,12 +64,16 @@ final class MatchCalculator {
     record Evaluation(List<MatchResult> matches, Placement placement) {
     }
 
-    /** rows: seçilen PT tablosunun satırları; tablo seçilmediyse null. */
-    static Evaluation evaluate(List<MatchIn> matches, List<GradeTableRow> rows, TransferType transferType) {
+    /**
+     * rows: seçilen PT tablosunun satırları; tablo seçilmediyse null. prep ve department: öğrencinin İngilizce
+     * hazırlık durumu ve geldiği bölümün dili (kural 2b).
+     */
+    static Evaluation evaluate(List<MatchIn> matches, List<GradeTableRow> rows, TransferType transferType,
+            PrepStatus prep, DepartmentLanguage department) {
         List<MatchResult> results = new ArrayList<>();
         BigDecimal countedCredit = BigDecimal.ZERO;
         for (MatchIn match : matches) {
-            MatchResult result = evaluate(match, rows);
+            MatchResult result = evaluate(match, rows, prep, department);
             results.add(result);
             // Eksik bilgili satır "sayıldı" işaretli olsa bile toplama girmez (kaydetmede de engellenir). Kural
             // uyarısı olan satır ise komisyon "sayıldı" dediyse toplama girer.
@@ -80,7 +84,8 @@ final class MatchCalculator {
         return new Evaluation(results, place(countedCredit, transferType));
     }
 
-    static MatchResult evaluate(MatchIn match, List<GradeTableRow> rows) {
+    static MatchResult evaluate(MatchIn match, List<GradeTableRow> rows, PrepStatus prep,
+            DepartmentLanguage department) {
         List<String> problems = new ArrayList<>();
         if (match.incoming().isEmpty()) {
             problems.add("Karşı kurum dersi girilmedi.");
@@ -119,11 +124,34 @@ final class MatchCalculator {
         if (yalovaEnglish && incomingTurkish) {
             warnings.add("Eğitim dili farklı: İngilizce Yalova dersi Türkçe dersle sayılmaz.");
         }
+        // Kural 2b: karşı ders İngilizceyse hazırlık şartı aranır.
+        boolean incomingEnglish = match.incoming().stream().anyMatch(c -> c.language() == CourseLanguage.EN);
+        String english = incomingEnglish ? englishCondition(prep, department) : null;
+        if (english != null) {
+            warnings.add(english);
+        }
 
         BigDecimal yalovaCredit = match.yalova().stream()
                 .map(CourseIn::credit).filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         return new MatchResult(grades, grade, yalovaCredit, problems, warnings);
+    }
+
+    /**
+     * Kural 2b: İngilizce karşı ders, öğrenci hazırlığı geçmişse (ya da sınavla muafsa) veya geldiği bölüm en az %30
+     * İngilizceyse sayılabilir. Şart tutuyorsa null; tutmuyorsa ya da bilgi eksikse uyarı metni döner.
+     */
+    static String englishCondition(PrepStatus prep, DepartmentLanguage department) {
+        if (prep == PrepStatus.PASSED || (department != null && department.isEnglish())) {
+            return null;
+        }
+        if (prep == null || prep == PrepStatus.UNKNOWN || department == null
+                || department == DepartmentLanguage.UNKNOWN) {
+            return "Hazırlık şartı: İngilizce ders için öğrenci bilgilerinde \"İngilizce hazırlık\" ve \"Bölümün"
+                    + " eğitim dili\" girilmeli; bilgi yokken ders sayılmaz önerilir.";
+        }
+        return "Hazırlık şartı: öğrenci İngilizce hazırlığı geçmemiş ve geldiği bölüm %30 İngilizce değil; İngilizce"
+                + " ders sayılmaz.";
     }
 
     /**
