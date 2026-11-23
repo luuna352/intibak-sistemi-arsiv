@@ -135,8 +135,11 @@ class MatchCalculatorTest {
                 List.of(incoming("92", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR)));
         assertThat(MatchCalculator.evaluate(english, ROWS, PrepStatus.NOT_TAKEN, TR).warnings())
                 .anyMatch(w -> w.contains("Hazırlık şartı"));
-        assertThat(MatchCalculator.evaluate(english, ROWS, PASSED, TR).suggestCounted()).isTrue();
-        assertThat(MatchCalculator.evaluate(turkish, ROWS, PrepStatus.NOT_TAKEN, TR).suggestCounted()).isTrue();
+        // (Bu satırların adları farklı ve içerik yok; kural 5b uyarısı ayrı, burada sadece hazırlık şartına bakılır.)
+        assertThat(MatchCalculator.evaluate(english, ROWS, PASSED, TR).warnings())
+                .noneMatch(w -> w.contains("Hazırlık şartı"));
+        assertThat(MatchCalculator.evaluate(turkish, ROWS, PrepStatus.NOT_TAKEN, TR).warnings())
+                .noneMatch(w -> w.contains("Hazırlık şartı"));
     }
 
     private static MatchCalculator.CourseIn named(String name) {
@@ -191,6 +194,25 @@ class MatchCalculatorTest {
         // Yalova konusu girilmemişse yüzde yok.
         assertThat(MatchCalculator.contentPercent(new MatchCalculator.MatchIn(true, List.of(named("X")),
                 List.of(named("Y"))))).isNull();
+    }
+
+    @Test
+    void differentNameWithoutYalovaContentIsNotSuggested() {
+        // Kural 5b: ad farklı ve Yalova dersinin içeriği yok -> karşılaştırma yapılamaz, "sayılmaz" önerilir.
+        MatchCalculator.MatchResult result = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
+                List.of(named("Data Structures")), List.of(named("Veri Yapıları"))), ROWS, PASSED, TR);
+        assertThat(result.basis()).isEqualTo(MatchBasis.CONTENT);
+        assertThat(result.warnings()).containsExactly(
+                "Veri Yapıları: içeriği yok, isim benzerliği yok; içerik karşılaştırması yapılamaz.");
+        assertThat(result.suggestCounted()).isFalse();
+        // Eksik bilgi değil, kural önerisi: komisyon sayarsa kayıt engellenmez.
+        assertThat(result.problems()).isEmpty();
+
+        // Adı aynıysa içerik aranmaz: içeriği olmayan seçmeli ders de doğrudan kabul.
+        MatchCalculator.MatchResult sameName = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
+                List.of(named("Oyun Programlama")), List.of(named("Oyun Programlama"))), ROWS, PASSED, TR);
+        assertThat(sameName.warnings()).isEmpty();
+        assertThat(sameName.suggestCounted()).isTrue();
     }
 
     @Test

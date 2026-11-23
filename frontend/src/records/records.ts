@@ -161,6 +161,16 @@ export const lines = (text: string) =>
     .map((x) => x.trim())
     .filter((x) => x !== '')
 
+// Kural 5b'nin ekrandaki metni (backend MatchCalculator.NO_CONTENT_NO_NAME ile aynı).
+export const NO_CONTENT_NO_NAME = 'İçeriği yok, isim benzerliği yok'
+
+/**
+ * Kural 5b: satır içerik karşılaştırmasına düştü (adlar farklı) ama bu Yalova dersinin konusu yok mu? Öyleyse
+ * dersin yanında kırmızı ünlem gösterilir; sistem eşleştirmeyi önermez.
+ */
+export const lacksContent = (m: EditMatch, basis: MatchView['basis'] | undefined, c: YalovaCourse) =>
+  basis === 'CONTENT' && lines(m.yalovaTopics[courseKey(c)]?.text ?? '').length === 0
+
 // Öğrencinin ders içerik belgesinin bir bölümü (backend: ContentDocument.Section). Belge sunucuda saklanmaz;
 // bölümler sadece bu formun hafızasında durur, seçilen bölüm karşı dersin içerik kutusuna kopyalanır.
 export type DocumentSection = { heading: string; code: string | null; content: string }

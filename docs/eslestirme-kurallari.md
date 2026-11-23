@@ -26,6 +26,7 @@ uygulanmaz; onlar en alttaki "Uygulanmayan öneriler" bölümünde soru olarak d
 | 3 | **Türk Dili ve tarih (Atatürk İlkeleri ve İnkılap Tarihi) dersleri** | Doğrudan kabul |
 | 4 | **Ders adları aynı** | Doğrudan kabul |
 | 5 | **Ders adları farklı** | İki dersin içeriği yan yana karşılaştırılır. Sistem örtüşme yüzdesini gösterir; **kabul kararını komisyon verir** (sabit bir eşik yok) |
+| 5b | **Ad farklı ve Yalova dersinin içeriği yok** (çoğu seçmeli dersin içeriği yok) | İçerik karşılaştırması yapılamaz: sistem eşleştirmez / "sayılmaz" önerir, dersin yanında kırmızı ünlem ve "İçeriği yok, isim benzerliği yok" uyarısı çıkar. Adı aynıysa içerik aranmaz, kural 4 geçerlidir. Komisyon konuları elle yazıp karşılaştırabilir ya da yine de sayabilir (kural 8) (kullanıcı onayı: 23 Kasım) |
 | 6 | **Kredi kuralı** | Şimdilik uygulanmaz |
 | 7 | **Yerleşim:** sayılan kredi 30'dan az 1. sınıf; 30-60 (ikisi dahil) 2. sınıf 3. dönem; 60'tan fazla 3. sınıf 5. dönem; DGS her zaman 5. dönem | Sistem **önerir**, komisyon sınıfı ve dönemi değiştirebilir (kullanıcı onayı: 23 Kasım) |
 | 8 | **Esneklik:** sistem öneri ve kolaylık içindir, işi hızlandırır | Derslerle ilgili her sonuç (sayıldı mı, not, yerleşim) komisyon tarafından değiştirilebilir; kesin kurallar sadece öneriyi belirler, değiştirmeyi engellemez (kullanıcı onayı: 23 Kasım) |
@@ -98,7 +99,8 @@ sayılamaz (eksik bilgi). "Sayıldı mı?" kutusu satırı silmeden sayımdan ç
 Bunlar hocanın ses kaydı özetinden (23 Kasım) ya da Senato Esasları'ndan geliyor; **şu an uygulanmıyor**.
 
 1. ~~Hazırlık şartı~~: kullanıcı onayladı, kesin kural 2b oldu.
-2. **İçerik bulunamazsa ders sayılmaz (hoca özeti):** şu an sadece uyarı yazılır, karar komisyonda.
+2. ~~İçerik bulunamazsa ders sayılmaz (hoca özeti)~~: Yalova tarafı için kesin kural 5b oldu (öneri "sayılmaz",
+   karar yine komisyonda). Karşı dersin içeriği bulunamazsa şu an sadece bilgi yazılır.
 3. **Sabit eşik (Senato Esasları 5/h: %75):** kullanıcı "eşik yok, komisyon karar versin" dedi.
 4. **Kredi kuralı (Senato Esasları 5/g, 5/j):** sonra.
 5. **Girilen notlara göre PT tablosu önerisi (hoca özeti):** 87 → PT1, A- → PT2, B1 → PT3.

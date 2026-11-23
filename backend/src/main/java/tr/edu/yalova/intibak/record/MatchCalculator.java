@@ -39,6 +39,8 @@ final class MatchCalculator {
     // Sınıf eşikleri (sayılan toplam kredi): < 30 -> 1. sınıf, 30-60 -> 2. sınıf, > 60 -> 3. sınıf.
     static final BigDecimal SECOND_CLASS_FROM = new BigDecimal("30");
     static final BigDecimal THIRD_CLASS_ABOVE = new BigDecimal("60");
+    // Kural 5b uyarısı (ekranda dersin yanındaki kırmızı ünlemle aynı metin).
+    static final String NO_CONTENT_NO_NAME = "içeriği yok, isim benzerliği yok";
 
     private MatchCalculator() {
     }
@@ -151,11 +153,21 @@ final class MatchCalculator {
         if (english != null) {
             warnings.add(english);
         }
+        // Kural 5b: ad farklı olduğu için içerik karşılaştırmasına düşen satırda Yalova dersinin içeriği yoksa
+        // karşılaştırma yapılamaz; sistem eşleştirmeyi önermez (komisyon yine de sayabilir, kural 8).
+        MatchBasis basis = basis(match);
+        if (basis == MatchBasis.CONTENT) {
+            for (CourseIn course : match.yalova()) {
+                if (course.topics().isEmpty()) {
+                    warnings.add(course.name() + ": " + NO_CONTENT_NO_NAME + "; içerik karşılaştırması yapılamaz.");
+                }
+            }
+        }
 
         BigDecimal yalovaCredit = match.yalova().stream()
                 .map(CourseIn::credit).filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new MatchResult(grades, grade, yalovaCredit, problems, warnings, basis(match), contentPercent(match));
+        return new MatchResult(grades, grade, yalovaCredit, problems, warnings, basis, contentPercent(match));
     }
 
     /**

@@ -12,10 +12,12 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import ContentComparison from './ContentComparison'
+import NoContentMark from './NoContentMark'
 import {
   courseKey,
   emptyIncoming,
   emptyMatch,
+  lacksContent,
   type DocumentSection,
   type EditIncoming,
   type EditMatch,
@@ -168,6 +170,19 @@ export default function MatchTable({ matches, onChange, results, planCourses, se
                   getOptionLabel={label}
                   isOptionEqualToValue={same}
                   onChange={(_, value) => update(m.key, withPlanTopics(m, value))}
+                  // Seçilen dersler etiket olarak; içeriği olmayan ve adı tutmayan dersin etiketinde kırmızı ünlem
+                  // (kural 5b).
+                  renderValue={(value, getItemProps) =>
+                    value.map((c, index) => {
+                      const { key, ...itemProps } = getItemProps({ index })
+                      const missing = lacksContent(m, r?.basis, c)
+                      return (
+                        <Chip key={key} {...itemProps} size="small" label={label(c)}
+                          color={missing ? 'error' : 'default'} variant={missing ? 'outlined' : 'filled'}
+                          icon={missing ? <NoContentMark /> : undefined} />
+                      )
+                    })
+                  }
                   noOptionsText="Planda ders yok (önce ders planı seçin)"
                   renderInput={(params) => <TextField {...params} placeholder="Kod ya da ad yazın" />}
                   sx={{ mt: 1 }}
