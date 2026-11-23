@@ -1,10 +1,9 @@
-# Ders eşleştirme kuralları (komisyon kararı, 23 Kasım 2026)
+# Ders eşleştirme kuralları (23 Kasım 2026)
 
-Bu dosya, intibak formunda bir eşleştirme satırının (karşı kurum ders(ler)i ↔ Yalova ders(ler)i) **ne zaman kabul
-edileceğini** tek yerde toplar. Üç kaynak var:
-- **K:** kullanıcının (komisyon adına) 23 Kasım 2026'da verdiği tarif,
-- **H:** hocanın ses kayıtlarının özeti (kullanıcı 23 Kasım 2026'da yapıştırdı),
-- **SE:** Ders Eşdeğerlik ve İntibak İşlemlerine İlişkin Senato Esasları, Madde 5 ve 6.
+Bu dosya, intibak formunda bir eşleştirme satırının (karşı kurum ders(ler)i ↔ Yalova ders(ler)i) nasıl
+değerlendirileceğini tek yerde toplar. **Geçerli olan sadece "Kesin kurallar" bölümüdür**: kullanıcının bu projede
+belirlediği kurallar. Hoca özetinden, mevzuattan ya da eski projelerden gelen başka bir şey, kullanıcı onaylamadan
+uygulanmaz; onlar en alttaki "Uygulanmayan öneriler" bölümünde soru olarak durur.
 
 ## Kullanıcının verdiği kurallar (aynen)
 
@@ -13,97 +12,60 @@ edileceğini** tek yerde toplar. Üç kaynak var:
 > Türkçe ve tarih dersleri direkt kabul olacak. Ders isimleri aynıysa onlar da kabul olacak. Ders isimleri farklıysa
 > işte o zaman ders içeriklerinde karşılaştırmaya gidilecek.
 
-## Kurallar, uygulanma sırasıyla
+> Karşı ders İngilizceyse ve bizimki Türkçeyse isimler eşleşmeyeceğinden içerik karşılaştırması yapmak doğru olabilir.
+> Ama karşı taraf Türkçe bizimki İngilizceyse direkt red. Derslerden hangisi Türkçe hangisi İngilizceyse isminden
+> anlaşılıyor. Şu anlık kredi kuralı uygulanmayacak. Hocanın bahsettiği 30-60-90 kuralı geçerli.
 
-| # | Kural | Sonuç | Dayanak |
-|---|---|---|---|
-| 1 | **Not:** karşı notu seçilen PT tablosuyla Yalova harfine çevrilir. FD, FF, DZ ya da tabloda olmayan not | Sayılmaz | SE 9, EK-1; H 6 |
-| 2a | **Dil:** Yalova dersi İngilizce, karşı ders Türkçe | Doğrudan red (içerik aynı olsa bile, içeriğe bakılmaz) | K; H 2; SE 5/c |
-| 2b | **Dil:** karşı ders İngilizce, ama öğrenci hazırlık okumamış ve geldiği bölüm Türkçe (en az %30 İngilizce değil) | Sayılmaz | H 2 |
-| 2c | **Dil:** karşı ders İngilizce (yukarıdaki şart sağlanıyor), Yalova dersi Türkçe ya da İngilizce | Sorun değil, sonraki kurala geçilir | K; H 2 |
-| 3 | **Ortak dersler:** Yalova dersi Türk Dili ya da Atatürk İlkeleri ve İnkılap Tarihi | Doğrudan kabul (içerik karşılaştırması yok) | K; H 1; SE 5/b |
-| 4 | **Ders adı aynı:** karşı dersin adı Yalova dersinin adıyla aynı (sistem bulur) | Doğrudan kabul (içerik karşılaştırması yok) | K; H 1 |
-| 5 | **Ders adı farklı:** iki dersin haftalık (14 hafta) konuları karşılaştırılır. Yalova dersinin konularının en az %75'i karşı derste karşılanmalı | %75 ve üstü kabul, altı sayılmaz | K; H 3; SE 5/h |
-| 5a | Ad farklı ve karşı dersin içeriği bulunamadı | Sayılmaz: "İçerik bulunamadı, öğrenciden ders içeriği istenmeli" | H 3 |
+## Kesin kurallar
 
-Kural 1 ve 2 her satırda çalışır. Kural 3 ya da 4 tutarsa kural 5'e bakılmaz.
+| # | Kural | Sonuç |
+|---|---|---|
+| 1 | **Dil:** Yalova dersi İngilizce, karşı ders Türkçe | Doğrudan red (içeriğe bakılmaz) |
+| 2 | **Dil:** karşı ders İngilizce, Yalova dersi Türkçe | Red değil; sonraki kurallara geçilir (adlar farklı dilde olduğu için genelde 5. kurala gider) |
+| 3 | **Türk Dili ve tarih (Atatürk İlkeleri ve İnkılap Tarihi) dersleri** | Doğrudan kabul |
+| 4 | **Ders adları aynı** | Doğrudan kabul |
+| 5 | **Ders adları farklı** | İki dersin içeriği yan yana karşılaştırılır. Sistem örtüşme yüzdesini gösterir; **kabul kararını komisyon verir** (sabit bir eşik yok) |
+| 6 | **Kredi kuralı** | Şimdilik uygulanmaz |
+| 7 | **Yerleşim:** sayılan kredi 30'dan az 1. sınıf; 30-60 (ikisi dahil) 2. sınıf 3. dönem; 60'tan fazla 3. sınıf 5. dönem; DGS her zaman 5. dönem | Mevcut, değişmiyor |
 
-## Ek kararlar (kullanıcı, 23 Kasım 2026)
+Ek olarak daha önce yapılmış ve değişmeyen kısımlar: not, seçilen PT tablosuyla Yalova harfine çevrilir; FD, FF, DZ
+ya da tabloda olmayan notla satır sayılmaz; "Sayıldı mı?" kutusu satırı silmeden sayımdan çıkarır.
 
-- **Karşı ders İngilizce, bizimki Türkçe:** adlar farklı dilde olduğu için sistem aynı ad bulamaz (ör. "Data
-  Structures" ↔ "Veri Yapıları"); bu durumda iki dersin içeriği karşılaştırılır (kural 5). Karşı ders Türkçe,
-  bizimki İngilizce ise doğrudan red.
-- **"Adlar denk" işareti yok** (kullanıcı beğenmedi): adı farklı her ders, çeviri olsa bile, içerik karşılaştırmasına
-  gider. Hocanın "çok yakın adları doğrudan eşleştirme" anlatımı ileride sabit eşleşme önerisiyle (B) kolaylaşır.
-- **İçerik belgeleri (eski intibak projesindeki gibi):** Yalova'nın ders içerik belgesi (PDF ya da DOCX) bir kez
-  sisteme yüklenir ve her plan dersinin konuları kaydedilir. Öğrencinin ders içerik belgesi (PDF ya da DOCX) kayda
-  yüklenir; sistem karşı dersin bölümünü belgede bulur. İkisi yan yana karşılaştırılır.
-- **Dersin dili adından anlaşılır:** İngilizce verilen dersin adı İngilizcedir. Formdaki "Dil" alanı (TR/EN) yine
-  durur; komisyon adına bakarak seçer.
-- **Kredi kuralı (SE 5/g, 5/j) şimdilik uygulanmaz.** Kurallar oturunca sonra ele alınacak.
-- **Yerleşim:** hocanın kuralı geçerlidir: sayılan kredi 30'dan az 1. sınıf; 30-60 (ikisi dahil) 2. sınıf 3. dönem;
-  60'tan fazla 3. sınıf 5. dönem; DGS her zaman 5. dönem. SE 6/b'deki "yarısından bir fazla" formülü kullanılmaz.
-  Plan yılı: 1. sınıf aktif yılın planı, 2. sınıf bir önceki, 3. sınıf iki önceki yılın planı.
+## Uygulama ayrıntıları
 
-## Hocanın anlattığı diğer noktalar (H)
-
-- **Not tablosunun otomatik kullanımı:** girilen not sayıysa (87) puan aralığı sütunundan, harfse (BB, B1) harf
-  sütunundan Yalova karşılığı bulunur. Aralık belirsizse öğrenci en yüksek puanı almış sayılır (73-80 → 80).
-  Kullanılan tablo formda görünür; yanlışsa komisyon elle değiştirir. (Yapıldı.)
-- **Hangi PT tablosu:** sistem girilen notlara bakıp uygun tabloyu önerebilir (87 → PT1, A- → PT2, B1 → PT3);
-  komisyon değiştirebilir.
-- **Çoğa-bir / bire-çok:** MYO ve DGS öğrencilerinde parçalanmış dersler (ör. üç küçük web dersi → Web Programlama)
-  birleştirilir, notlarının ortalaması alınır; geniş bir ders bizim iki dersimize sayılabilir. (Yapıldı.)
-- **Sadece sayılan dersler Word formuna yazılır;** sayılmayan ve başarısız dersler formda yer almaz. (Word adımı.)
-- **Staj** intibak komisyonunun ve bu yazılımın kapsamı dışında (staj komisyonu ayrı değerlendirir).
-- **Birden fazla üniversite:** öğrenci A → B → Yalova geldiyse her üniversite için ayrı intibak kaydı açılır.
-  B'nin transkriptinde A'nın dersleri sadece "Başarılı" görünüyorsa not karşılığı belli değildir; A'nın transkripti
-  istenir.
-- **Sistem kilitli değil:** komisyon her eşleştirmeyi silebilir, değiştirebilir, elle yeni satır ekleyebilir.
-- **Yapay zekâ ile içerik yüzdesi** ("%70 tutuyor") ve öğrenciye otomatik mesaj: 2. dönem işi.
-
-## Uygulama ayrıntıları (öneri, komisyonca doğrulanacak)
-
+- **Dersin dili:** adından anlaşılır; formdaki "Dil" alanını (TR/EN) komisyon ada bakarak seçer.
 - **"Ad aynı" nasıl anlaşılır:** büyük/küçük harf, baştaki ve sondaki boşluklar, birden fazla boşluk ve noktalama
   farkı yok sayılır (Türkçe harf kuralıyla: "İ" ile "i" aynı); sondaki I, II, III, IV ile 1, 2, 3, 4 aynı sayılır.
   Örnek: "Veri Yapıları" = "veri  yapıları", "Fizik I" = "Fizik 1". Kelime farkı aynı sayılmaz.
-- **Birden çok dersli satır:** çoğa-bir ya da bire-çok satırda her Yalova dersinin karşı tarafta aynı adlı bir
-  dersi varsa ad kuralı tutar; yoksa satır içerik karşılaştırmasına gider.
-- **Ortak ders:** Yalova dersinin adında "Türk Dili" ya da "Atatürk İlkeleri" / "İnkılap Tarihi" geçmesiyle tanınır.
-  Satırdaki bütün Yalova dersleri ortak dersse kural 3 tutar.
-- **Hazırlık ve bölüm dili:** kayda iki bilgi eklenir: "Hazırlık sınıfını başardı mı?" (evet / hayır / bilinmiyor)
-  ve "Geldiği bölümün eğitim dili" (Türkçe / %30 İngilizce / %100 İngilizce). Bilinmiyorsa uyarı verilir.
-- **İçerik yüzdesi:** payda Yalova dersinin haftalık konu sayısıdır. Sınav ve tekrar haftaları konu listesine
-  yazılmaz. Komisyon karşı dersin içeriğine bakıp her Yalova konusu için "karşılanıyor" kutusunu işaretler; sistem
-  yüzdeyi hesaplar (karşılanan / toplam Yalova konusu).
-- **Hazırlık şartı:** karşı ders İngilizceyse öğrenci hazırlığı başarmış (ya da sınavla muaf) olmalı veya geldiği
-  bölüm en az %30 İngilizce olmalı. İkisi de "bilinmiyor" ise satır sayılmaz, bilgi girilmesi istenir.
+- **Birden çok dersli satır:** her Yalova dersinin karşı tarafta aynı adlı bir dersi varsa 4. kural tutar; yoksa
+  satır içerik karşılaştırmasına gider.
+- **Türk Dili ve tarih dersi nasıl tanınır:** Yalova dersinin adında "Türk Dili", "Atatürk" ya da "İnkılap" geçer.
+  Satırdaki bütün Yalova dersleri böyleyse 3. kural tutar.
+- **İçerik karşılaştırması:** solda karşı dersin içeriği, sağda Yalova dersinin konuları (bir satır bir konu).
+  Komisyon karşı dersin içeriğine bakıp her Yalova konusu için "karşılanıyor" kutusunu işaretler. Yüzde =
+  karşılanan Yalova konusu / toplam Yalova konusu. İçerik girilmemişse sistem bunu yazar, ama kararı yine komisyon
+  verir.
+- **İçerikler nereden gelir:** Yalova'nın ders içerik belgesi (PDF ya da DOCX) bir kez yüklenir, her plan dersinin
+  konuları kaydedilir. Öğrencinin ders içerik belgesi (PDF ya da DOCX) kayda yüklenir; sistem karşı dersin bölümünü
+  belgede bulur. İkisi de elle düzeltilebilir ya da yapıştırılabilir. Konular kayda kopya olarak saklanır.
 
-## Açık sorular
+## Uygulama planı (dal: `feature/icerik-karsilastirma`)
 
-1. Ortak derste karşı dersin de Türk Dili / tarih dersi olduğunu sistem mi kontrol etsin, komisyon mu?
-2. Bağımsız laboratuvar ve proje dersleri (SE 5/ı) için ayrı kural gerekiyor mu?
-3. Hazırlık şartı: %30 İngilizce bölümden gelen ama hazırlık okumamış öğrencinin İngilizce dersleri sayılır mı?
-4. İçerik eşiği: hoca örneklerde %70 / %80 diyor, SE 5/h %75 diyor. Sistem %75 kullanıyor.
+- **A1:** kurallar 1-5 ve formda içerik karşılaştırma bölümü (V8: her dersin konuları, Yalova konularında
+  "karşılanıyor" işareti).
+- **A2:** Yalova ders içerikleri: plan başına konular, Ayarlar > Ders planları'nda düzenleme ve belge yükleme; formda
+  Yalova dersi seçilince konuları kendiliğinden gelir.
+- **A3:** öğrencinin ders içerik belgesi: kayda PDF/DOCX yükleme, "Belgede bul" ile karşı dersin bölümünü getirme.
+  Taranmış (resim) PDF okunmaz, içerik elle yapıştırılır.
 
-## Uygulama planı
+## Uygulanmayan öneriler (kullanıcı onaylarsa eklenir)
 
-**A1. Kurallar ve içerik karşılaştırması** (commit 1)
-- V8 migration: `intibak_record` hazırlık durumu ve geldiği bölümün eğitim dili; `intibak_match_topic` her dersin
-  konuları (Yalova konularında "karşılanıyor" işareti). Konular kayda kopya olarak saklanır.
-- `MatchCalculator`: kural 2b, 3, 4, 5, 5a; her satır için kabul sebebi (ortak ders / ad aynı / içerik %X).
-- Form: hazırlık ve bölüm dili; satırda kabul sebebi; adlar farklıysa "İçerik karşılaştırma" bölümü: solda karşı
-  dersin içeriği, sağda Yalova dersinin konuları ve her birinin yanında "karşılanıyor" kutusu; yüzde.
+Bunlar hocanın ses kaydı özetinden (23 Kasım) ya da Senato Esasları'ndan geliyor; **şu an uygulanmıyor**.
 
-**A2. Yalova ders içerikleri** (commit 2)
-- Plan başına Yalova derslerinin konuları (`course_content`), Ayarlar > Ders planları'nda düzenlenir.
-- Yalova ders içerik belgesi (PDF/DOCX) yüklenince her dersin bölümü ders koduyla bulunur, konulara bölünür.
-- Formda Yalova dersi seçilince konuları kendiliğinden gelir.
-
-**A3. Öğrencinin ders içerik belgesi** (commit 3)
-- Kayda PDF/DOCX yüklenir, metni çıkarılır; her karşı ders için "Belgede bul" o dersin bölümünü getirir.
-- Taranmış (resim) PDF okunmaz: içerik elle yapıştırılır (OCR 2. dönem).
-
-**A4. PT tablosu önerisi** (commit 4): girilen notlara göre (87 → PT1, A- → PT2, B1 → PT3).
-
-**B. Sonra:** üniversite / bölüm / yıl bazında içerik arşivi, sık görülen eşleşmeler listesi, kredi kuralı.
+1. **Hazırlık şartı (hoca özeti):** karşı ders İngilizceyse öğrenci hazırlığı geçmiş ya da geldiği bölüm en az %30
+   İngilizce olmalı; değilse o İngilizce ders sayılmaz.
+2. **İçerik bulunamazsa ders sayılmaz (hoca özeti):** şu an sadece uyarı yazılır, karar komisyonda.
+3. **Sabit eşik (Senato Esasları 5/h: %75):** kullanıcı "eşik yok, komisyon karar versin" dedi.
+4. **Kredi kuralı (Senato Esasları 5/g, 5/j):** sonra.
+5. **Girilen notlara göre PT tablosu önerisi (hoca özeti):** 87 → PT1, A- → PT2, B1 → PT3.
+6. **Sadece sayılan dersler Word formuna yazılır (hoca özeti):** Word adımında sorulacak.
