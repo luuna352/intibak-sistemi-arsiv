@@ -69,15 +69,17 @@ export default function Layout({ children }: { children: ReactNode }) {
         {menuOpen && (
           <Box component="nav" sx={{ width: 270, flexShrink: 0, bgcolor: '#f8f9fb', borderRight: '1px solid #dfe3ea' }}>
             <List disablePadding>
-              {item('/kayitlar', 'İntibak kayıtları')}
-              {item('/yeni-form', 'Yeni intibak formu')}
+              {/* Ana başlıklar tamamen büyük harf, Ayarlar'ın alt başlıkları sadece ilk harf büyük (kullanıcı isteği).
+                  Büyük harf CSS ile değil elle yazıldı: CSS dönüşümü "i" harfini Türkçe "İ" yerine "I" yapabilir. */}
+              {item('/kayitlar', 'İNTİBAK KAYITLARI')}
+              {item('/yeni-form', 'YENİ İNTİBAK FORMU')}
               <ListItemButton onClick={() => setSettingsOpen(!settingsOpen)}>
-                <ListItemText primary="Ayarlar" slotProps={{ primary: { sx: { fontWeight: 700 } } }} />
+                <ListItemText primary="AYARLAR" slotProps={{ primary: { sx: { fontWeight: 700 } } }} />
                 {settingsOpen ? <ExpandLess /> : <ExpandMore />}
               </ListItemButton>
               <Collapse in={settingsOpen}>{settings.map((s) => item(s.to, s.label, true))}</Collapse>
               <ListItemButton onClick={logout}>
-                <ListItemText primary="Çıkış yap" slotProps={{ primary: { sx: { fontWeight: 700, color: 'error.main' } } }} />
+                <ListItemText primary="ÇIKIŞ YAP" slotProps={{ primary: { sx: { fontWeight: 700, color: 'error.main' } } }} />
               </ListItemButton>
             </List>
           </Box>
