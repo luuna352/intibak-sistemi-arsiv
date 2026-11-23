@@ -16,13 +16,23 @@ Dayanak: Ders Eşdeğerlik ve İntibak İşlemlerine İlişkin Senato Esasları 
 | # | Kural | Sonuç | Dayanak |
 |---|---|---|---|
 | 1 | **Not:** karşı notu seçilen PT tablosuyla Yalova harfine çevrilir. FD, FF, DZ ya da tabloda olmayan not | Sayılmaz | SE 9, EK-1 |
-| 2 | **Dil:** Yalova dersi İngilizce, karşı ders Türkçe | Sayılmaz | Kullanıcı; SE 5/c |
-| 2 | **Dil:** karşı ders İngilizce, Yalova dersi Türkçe | Sorun değil, sonraki kurala geçilir | Kullanıcı |
+| 2 | **Dil:** Yalova dersi İngilizce, karşı ders Türkçe | Doğrudan red (içeriğe bakılmaz) | Kullanıcı; SE 5/c |
+| 2 | **Dil:** karşı ders İngilizce, Yalova dersi Türkçe | Sorun değil, sonraki kurala geçilir. Adlar farklı dilde olduğu için genelde kural 5'e (içerik) gider | Kullanıcı |
 | 3 | **Ortak dersler:** Yalova dersi Türk Dili ya da Atatürk İlkeleri ve İnkılap Tarihi | Doğrudan kabul (içerik karşılaştırması yok) | Kullanıcı; SE 5/b |
 | 4 | **Ders adı aynı:** karşı dersin adı Yalova dersinin adıyla aynı | Doğrudan kabul (içerik karşılaştırması yok) | Kullanıcı |
 | 5 | **Ders adı farklı:** iki dersin haftalık konuları karşılaştırılır. Yalova dersinin konularının en az %75'i karşı derste karşılanmalı | %75 ve üstü kabul, altı sayılmaz. Konular girilmemişse "içerik karşılaştırması gerekli" | Kullanıcı; SE 5/h |
 
 Kural 1 ve 2 her satırda çalışır. Kural 3 ya da 4 tutarsa kural 5'e bakılmaz.
+
+## Ek kararlar (kullanıcı, 23 Kasım 2026)
+
+- **Karşı ders İngilizce, bizimki Türkçe:** adlar farklı dilde olduğu için eşleşmez (ör. "Data Structures" ↔ "Veri
+  Yapıları"); bu durumda içerik karşılaştırması yapılır. Karşı ders Türkçe, bizimki İngilizce ise doğrudan red.
+- **Dersin dili adından anlaşılır:** İngilizce verilen dersin adı İngilizcedir. Formdaki "Dil" alanı (TR/EN) yine
+  durur; komisyon adına bakarak seçer.
+- **Kredi kuralı (SE 5/g, 5/j) şimdilik uygulanmaz.** Kurallar oturunca sonra ele alınacak.
+- **Yerleşim:** hocanın söylediği 30 / 60 / 90 kredi kuralı geçerlidir. SE 6/b'deki "yarısından bir fazla" formülü
+  kullanılmaz.
 
 ## Uygulama ayrıntıları (öneri, komisyonca doğrulanacak)
 
@@ -39,12 +49,11 @@ Kural 1 ve 2 her satırda çalışır. Kural 3 ya da 4 tutarsa kural 5'e bakılm
 
 ## Açık sorular
 
-1. Kredi kuralı (SE 5/g: karşı dersin kredisi Yalova dersinin en az %65'i; kredi yoksa SE 5/j: AKTS en az %75)
-   uygulansın mı? Kullanıcının tarifinde yok.
-2. Ortak derste karşı dersin de Türk Dili / tarih dersi olduğunu sistem mi kontrol etsin, komisyon mu?
-3. Bağımsız laboratuvar ve proje dersleri (SE 5/ı) için ayrı kural gerekiyor mu?
-4. Yerleşim: hocanın verdiği 30 / 60 kredi sınırları ile SE 6/b'deki "toplam kredinin yarısından en az bir fazla"
-   formülü farklı. Hangisi geçerli?
+1. Ortak derste karşı dersin de Türk Dili / tarih dersi olduğunu sistem mi kontrol etsin, komisyon mu?
+2. Bağımsız laboratuvar ve proje dersleri (SE 5/ı) için ayrı kural gerekiyor mu?
+3. 30 / 60 / 90 kuralında 90 kredinin üstü: SE 6/a'ya göre 7. yarıyıla intibak yapılmaz, bu yüzden sistem 60'ın
+   üstünü (90'ın üstü dahil) 3. sınıf, 5. dönem sayıyor. Hocanın "90" ile kastettiği bu mu? Sınırlar şu an:
+   30'dan az 1. sınıf, 30-60 (dahil) 2. sınıf 3. dönem, 60'tan fazla 3. sınıf 5. dönem; DGS her zaman 5. dönem.
 
 ## Uygulama planı
 
