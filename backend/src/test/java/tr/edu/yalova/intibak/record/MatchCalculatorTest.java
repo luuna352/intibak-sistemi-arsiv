@@ -41,6 +41,22 @@ class MatchCalculatorTest {
     }
 
     @Test
+    void convertsEk1LetterSystemByLetterOrCoefficient() {
+        // EK-1 harf sistemi (PT2'nin bir kısmı): karşı sayı alt = üst olarak tutulur, F0 devamsız -> DZ.
+        List<GradeTableRow> pt2 = List.of(
+                new GradeTableRow(0, "A", new BigDecimal("4.00"), new BigDecimal("4.00"), YalovaGrade.AA),
+                new GradeTableRow(1, "A-", new BigDecimal("3.70"), new BigDecimal("3.70"), YalovaGrade.AA),
+                new GradeTableRow(2, "B+", new BigDecimal("3.30"), new BigDecimal("3.30"), YalovaGrade.BA),
+                new GradeTableRow(3, "F0", null, null, YalovaGrade.DZ));
+        assertThat(MatchCalculator.convert("a-", pt2)).isEqualTo(YalovaGrade.AA);
+        assertThat(MatchCalculator.convert("B+", pt2)).isEqualTo(YalovaGrade.BA);
+        assertThat(MatchCalculator.convert("3,30", pt2)).isEqualTo(YalovaGrade.BA);
+        // 3.5 iki sayının (3.30 ile 3.70) arasında: öğrenci lehine üstteki A- -> AA.
+        assertThat(MatchCalculator.convert("3.5", pt2)).isEqualTo(YalovaGrade.AA);
+        assertThat(MatchCalculator.convert("F0", pt2)).isEqualTo(YalovaGrade.DZ);
+    }
+
+    @Test
     void scoreInGapGetsTheHigherGradeForTheStudent() {
         // 89.5 hiçbir aralıkta değil: 85-89 (BA) ile 90-100 (AA) arasında; öğrenci lehine AA.
         assertThat(MatchCalculator.convert("89.5", ROWS)).isEqualTo(YalovaGrade.AA);

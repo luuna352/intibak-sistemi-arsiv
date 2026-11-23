@@ -47,8 +47,11 @@ export default function GradeTablePreview({ gradeTableId }: { gradeTableId: stri
     return error ? <Typography color="error">{error}</Typography> : null
   }
 
-  // "90 - 100" gibi aralık metni; aralık yoksa boş.
-  const range = (r: Row) => (r.sourceMin === null ? '' : `${r.sourceMin} - ${r.sourceMax}`)
+  // "90 - 100" gibi aralık metni; aralık yoksa boş. Alt ve üst aynıysa (PT2'deki 3.70 gibi tek sayı) tek değer.
+  const range = (r: Row) => {
+    if (r.sourceMin === null) return ''
+    return Number(r.sourceMin) === Number(r.sourceMax) ? `${r.sourceMin}` : `${r.sourceMin} - ${r.sourceMax}`
+  }
 
   return (
     <Accordion defaultExpanded variant="outlined" sx={{ mt: 2 }}>
