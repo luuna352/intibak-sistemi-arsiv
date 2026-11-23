@@ -22,6 +22,7 @@ uygulanmaz; onlar en alttaki "Uygulanmayan öneriler" bölümünde soru olarak d
 |---|---|---|
 | 1 | **Dil:** Yalova dersi İngilizce, karşı ders Türkçe | Doğrudan red (içeriğe bakılmaz) |
 | 2 | **Dil:** karşı ders İngilizce, Yalova dersi Türkçe | Red değil; sonraki kurallara geçilir (adlar farklı dilde olduğu için genelde 5. kurala gider) |
+| 2b | **Hazırlık:** karşı ders İngilizceyse öğrenci İngilizce hazırlığı geçmiş (ya da sınavla muaf) olmalı **veya** geldiği bölüm en az %30 İngilizce olmalı. İkisi de yoksa | O İngilizce ders sayılmaz. Hazırlık ve bölüm dili bilgisi girilmemişse de sayılmaz, bilgi istenir (kullanıcı onayı: 23 Kasım) |
 | 3 | **Türk Dili ve tarih (Atatürk İlkeleri ve İnkılap Tarihi) dersleri** | Doğrudan kabul |
 | 4 | **Ders adları aynı** | Doğrudan kabul |
 | 5 | **Ders adları farklı** | İki dersin içeriği yan yana karşılaştırılır. Sistem örtüşme yüzdesini gösterir; **kabul kararını komisyon verir** (sabit bir eşik yok) |
@@ -69,8 +70,7 @@ ya da tabloda olmayan notla satır sayılmaz; "Sayıldı mı?" kutusu satırı s
 
 Bunlar hocanın ses kaydı özetinden (23 Kasım) ya da Senato Esasları'ndan geliyor; **şu an uygulanmıyor**.
 
-1. **Hazırlık şartı (hoca özeti):** karşı ders İngilizceyse öğrenci hazırlığı geçmiş ya da geldiği bölüm en az %30
-   İngilizce olmalı; değilse o İngilizce ders sayılmaz.
+1. ~~Hazırlık şartı~~: kullanıcı onayladı, kesin kural 2b oldu.
 2. **İçerik bulunamazsa ders sayılmaz (hoca özeti):** şu an sadece uyarı yazılır, karar komisyonda.
 3. **Sabit eşik (Senato Esasları 5/h: %75):** kullanıcı "eşik yok, komisyon karar versin" dedi.
 4. **Kredi kuralı (Senato Esasları 5/g, 5/j):** sonra.
