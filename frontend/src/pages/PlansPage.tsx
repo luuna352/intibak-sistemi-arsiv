@@ -337,7 +337,7 @@ export default function PlansPage() {
 
   return (
     <>
-      <Typography variant="h5">Ayarlar · Ders planları</Typography>
+      <Typography variant="h5">AYARLAR · Ders Planları</Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>
         Her akademik yılın planı şablona uygun Excel ile yüklenir ve burada düzenlenir. Toplamlar dosyadan okunmaz,
         sistem derslerden hesaplar; orijinal planla karşılaştırarak aktarımın doğru olduğunu kontrol edin.

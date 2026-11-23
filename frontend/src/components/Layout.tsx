@@ -20,9 +20,9 @@ import { useActiveYear } from '../settings/activeYear'
 // Ayarlar menüsünün alt sayfaları (mockup'taki sıra).
 const settings = [
   { to: '/ayarlar/kullanicilar', label: 'Kullanıcılar' },
-  { to: '/ayarlar/ders-planlari', label: 'Ders planları' },
-  { to: '/ayarlar/not-tablolari', label: 'Not tabloları' },
-  { to: '/ayarlar/aktif-yil', label: 'Aktif eğitim yılı' },
+  { to: '/ayarlar/ders-planlari', label: 'Ders Planları' },
+  { to: '/ayarlar/not-tablolari', label: 'Not Tabloları' },
+  { to: '/ayarlar/aktif-yil', label: 'Aktif Eğitim Yılı' },
 ]
 
 // Girişten sonraki ortak çerçeve: üst çubuk + ☰ ile açılıp kapanan sol menü + sayfa içeriği.
@@ -69,7 +69,8 @@ export default function Layout({ children }: { children: ReactNode }) {
         {menuOpen && (
           <Box component="nav" sx={{ width: 270, flexShrink: 0, bgcolor: '#f8f9fb', borderRight: '1px solid #dfe3ea' }}>
             <List disablePadding>
-              {/* Ana başlıklar tamamen büyük harf, Ayarlar'ın alt başlıkları sadece ilk harf büyük (kullanıcı isteği).
+              {/* Ana başlıklar tamamen büyük harf, Ayarlar'ın alt başlıklarında her kelimenin ilk harfi büyük (kullanıcı
+                  isteği; sayfa başlıkları da aynı düzende).
                   Büyük harf CSS ile değil elle yazıldı: CSS dönüşümü "i" harfini Türkçe "İ" yerine "I" yapabilir. */}
               {item('/kayitlar', 'İNTİBAK KAYITLARI')}
               {item('/yeni-form', 'YENİ İNTİBAK FORMU')}

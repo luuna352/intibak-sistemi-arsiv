@@ -41,7 +41,7 @@ export default function ActiveYearPage() {
 
   return (
     <>
-      <Typography variant="h5">Ayarlar · Aktif eğitim-öğretim yılı</Typography>
+      <Typography variant="h5">AYARLAR · Aktif Eğitim-Öğretim Yılı</Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>
         Tek bir yerde tutulur. Bir üye değiştirince giriş yapan herkes yeni yılı görür.
       </Typography>

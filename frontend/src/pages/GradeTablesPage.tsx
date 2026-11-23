@@ -166,7 +166,7 @@ export default function GradeTablesPage() {
 
   return (
     <>
-      <Typography variant="h5">Ayarlar · Not dönüşüm tabloları</Typography>
+      <Typography variant="h5">AYARLAR · Not Dönüşüm Tabloları</Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>
         PT1, PT2, PT3 Senato İntibak Esasları EK-1'deki üç tablodur. Burada sadece kaydedilir; intibak formunda seçilen
         tablo öğrencinin notunu Yalova notuna çevirir. Başka bir not sistemi çıkarsa yeni tablo eklenir; değerler

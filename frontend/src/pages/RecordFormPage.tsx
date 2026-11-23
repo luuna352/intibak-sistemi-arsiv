@@ -244,7 +244,7 @@ export default function RecordFormPage() {
   return (
     <>
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
-        <Typography variant="h5">{record ? 'İntibak formu' : 'Yeni intibak formu'}</Typography>
+        <Typography variant="h5">{record ? 'İNTİBAK FORMU' : 'YENİ İNTİBAK FORMU'}</Typography>
         {record && <Chip label={record.statusLabel} color={statusColor[record.status]} />}
         <Box sx={{ flex: 1 }} />
         <Button onClick={() => navigate('/kayitlar')}>← Listeye dön</Button>

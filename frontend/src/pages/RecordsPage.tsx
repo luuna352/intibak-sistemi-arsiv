@@ -110,7 +110,7 @@ export default function RecordsPage() {
 
   return (
     <>
-      <Typography variant="h5">İntibak kayıtları</Typography>
+      <Typography variant="h5">İNTİBAK KAYITLARI</Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>
         Aktif yıl: <b>{activeYear?.label}</b>
       </Typography>

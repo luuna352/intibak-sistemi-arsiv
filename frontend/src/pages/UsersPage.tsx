@@ -71,7 +71,7 @@ export default function UsersPage() {
 
   return (
     <>
-      <Typography variant="h5">Ayarlar · Kullanıcılar</Typography>
+      <Typography variant="h5">AYARLAR · Kullanıcılar</Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>
         4 sabit rol hesabı. Komisyon üyeleri değişince yeni hesap açılmaz, rolün ekranda görünen adı güncellenir. Tüm
         roller eşit yetkilidir.
