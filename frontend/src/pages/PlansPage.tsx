@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -6,7 +6,6 @@ import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
-import IconButton from '@mui/material/IconButton'
 import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
 import Tab from '@mui/material/Tab'
@@ -19,11 +18,10 @@ import TableRow from '@mui/material/TableRow'
 import Tabs from '@mui/material/Tabs'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
-import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown'
-import KeyboardArrowRight from '@mui/icons-material/KeyboardArrowRight'
 import { api } from '../api/client'
 import ContentImportDialog, { type ContentProposal } from '../curriculum/ContentImportDialog'
+import PlanCourseRow from '../curriculum/PlanCourseRow'
+import { topicCount, type EditRow } from '../curriculum/planRow'
 import { useActiveYear } from '../settings/activeYear'
 
 // Backend'deki CurriculumService kayıtlarıyla aynı alanlar.
@@ -55,27 +53,7 @@ type Detail = {
 }
 type Resolution = { requestedYear: number; requestedLabel: string; planId: number | null; planLabel: string | null; exact: boolean }
 
-// Ekranda düzenlenen ders: kutular metin tutar, kaydederken sayıya çevrilir. key: React'in satırları ayırt etmesi
-// için sabit numara (satır silinince/eklenince kutuların karışmaması için dizideki sıra kullanılmaz).
-type EditRow = {
-  key: number
-  semester: string
-  groupName: string
-  code: string
-  name: string
-  zs: 'Z' | 'S'
-  language: 'TR' | 'EN'
-  theory: string
-  practice: string
-  credit: string
-  ects: string
-  content: string
-}
-
-// İçerikteki konular: her satır bir konu, boş satırlar atlanır.
-const topicsOf = (content: string) => content.split('\n').map((x) => x.trim()).filter((x) => x !== '')
-// İçerik kutusundaki konu sayısı (boş satırlar sayılmaz).
-const topicCount = (content: string) => topicsOf(content).length
+// Ekranda düzenlenen ders satırı (EditRow) ve konu sayma curriculum/planRow.ts'te.
 
 // Sekmeler: 1-4. sınıf (her sınıf 2 yarıyıl) ve yarıyılı olmayan seçmeli havuzları.
 type TabKey = '1' | '2' | '3' | '4' | 'S'
@@ -189,15 +167,16 @@ export default function PlansPage() {
   // Konuları açık olan satırlar (key). Soldaki oka basınca satır eklenir/çıkar; sadece görünüm, kayda girmez.
   const [openKeys, setOpenKeys] = useState<Set<number>>(new Set())
 
-  function toggleOpen(key: number) {
-    // Fonksiyonlu güncelleme: art arda hızlı tıklamalarda hep en güncel küme kullanılır.
+  // Fonksiyonlu güncelleme: art arda hızlı tıklamalarda hep en güncel küme kullanılır; useCallback: satırlara
+  // her çizimde aynı fonksiyon gitsin (memo).
+  const toggleOpen = useCallback((key: number) => {
     setOpenKeys((prev) => {
       const next = new Set(prev)
       if (next.has(key)) next.delete(key)
       else next.add(key)
       return next
     })
-  }
+  }, [])
 
   function show(d: Detail) {
     setDetail(d)
@@ -237,9 +216,21 @@ export default function PlansPage() {
       .catch((e: Error) => setMessage({ type: 'error', text: e.message }))
   }, [activeYear, plans])
 
-  function updateRow(key: number, field: keyof EditRow, value: string) {
-    setRows(rows.map((r) => (r.key === key ? { ...r, [field]: value } : r)))
-  }
+  // Satır fonksiyonları useCallback ile sabit tutulur ve setRows'a fonksiyon verilir (güncel listeyi o anda alır).
+  // Böylece her çizimde aynı fonksiyon gider, memo'lu satırlar (PlanCourseRow) boşuna yeniden çizilmez.
+  const updateRow = useCallback((key: number, field: keyof EditRow, value: string) => {
+    setRows((prev) => prev.map((r) => (r.key === key ? { ...r, [field]: value } : r)))
+  }, [])
+
+  const deleteRow = useCallback((key: number) => {
+    setRows((prev) => prev.filter((r) => r.key !== key))
+  }, [])
+
+  // "N konu / Ekle": içerik penceresini o satırın metniyle açar.
+  const editContent = useCallback((row: EditRow) => {
+    setContentKey(row.key)
+    setContentText(row.content)
+  }, [])
 
   function addRow() {
     // Sınıf sekmesinde o sınıfın ilk yarıyılına, havuz sekmesinde son havuzun adıyla eklenir.
@@ -433,133 +424,8 @@ export default function PlansPage() {
               </TableHead>
               <TableBody>
                 {visible.map((r) => (
-                  // Fragment: ders satırı ve (açıksa) altındaki konular satırı birlikte döner.
-                  <Fragment key={r.key}>
-                  <TableRow>
-                    <TableCell padding="checkbox">
-                      {/* Ok: dersin konularını hemen altında açar/kapatır. */}
-                      <IconButton size="small" aria-label={openKeys.has(r.key) ? 'Konuları kapat' : 'Konuları aç'}
-                        onClick={() => toggleOpen(r.key)}>
-                        {openKeys.has(r.key) ? <KeyboardArrowDown fontSize="small" /> : <KeyboardArrowRight fontSize="small" />}
-                      </IconButton>
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        select
-                        size="small"
-                        value={r.semester}
-                        onChange={(e) => updateRow(r.key, 'semester', e.target.value)}
-                        sx={{ width: 90 }}
-                      >
-                        <MenuItem value="">Havuz</MenuItem>
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                          <MenuItem key={s} value={String(s)}>
-                            {s}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        size="small"
-                        value={r.groupName}
-                        onChange={(e) => updateRow(r.key, 'groupName', e.target.value)}
-                        sx={{ width: 150 }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        size="small"
-                        value={r.code}
-                        placeholder="kod yok"
-                        onChange={(e) => updateRow(r.key, 'code', e.target.value)}
-                        sx={{ width: 100 }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        size="small"
-                        value={r.name}
-                        onChange={(e) => updateRow(r.key, 'name', e.target.value)}
-                        sx={{ minWidth: 240 }}
-                        fullWidth
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        select
-                        size="small"
-                        value={r.zs}
-                        onChange={(e) => updateRow(r.key, 'zs', e.target.value)}
-                        sx={{ width: 64 }}
-                      >
-                        <MenuItem value="Z">Z</MenuItem>
-                        <MenuItem value="S">S</MenuItem>
-                      </TextField>
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        select
-                        size="small"
-                        value={r.language}
-                        onChange={(e) => updateRow(r.key, 'language', e.target.value)}
-                        sx={{ width: 72 }}
-                      >
-                        <MenuItem value="TR">TR</MenuItem>
-                        <MenuItem value="EN">EN</MenuItem>
-                      </TextField>
-                    </TableCell>
-                    {(['theory', 'practice', 'credit', 'ects'] as const).map((field) => (
-                      <TableCell key={field}>
-                        <TextField
-                          size="small"
-                          value={r[field]}
-                          onChange={(e) => updateRow(r.key, field, e.target.value)}
-                          sx={{ width: 64 }}
-                        />
-                      </TableCell>
-                    ))}
-                    <TableCell>
-                      {/* Dersin içeriği (kural 5): formda bu ders seçilince konular kendiliğinden gelir. */}
-                      <Button size="small" sx={{ whiteSpace: 'nowrap' }}
-                        onClick={() => {
-                          setContentKey(r.key)
-                          setContentText(r.content)
-                        }}>
-                        {topicCount(r.content) > 0 ? `${topicCount(r.content)} konu` : 'Ekle'}
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <IconButton
-                        size="small"
-                        aria-label="Dersi sil"
-                        onClick={() => setRows(rows.filter((x) => x.key !== r.key))}
-                      >
-                        <DeleteOutlined fontSize="small" />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                  {openKeys.has(r.key) && (
-                    // Konular satırı: bütün sütunları kaplar, konular numaralı liste. Düzenleme "N konu" penceresinden.
-                    <TableRow sx={{ bgcolor: 'action.hover' }}>
-                      <TableCell colSpan={13}>
-                        {topicCount(r.content) === 0 ? (
-                          <Typography variant="body2" color="text.secondary">
-                            İçerik girilmemiş.
-                          </Typography>
-                        ) : (
-                          <Box component="ol" sx={{ m: 0, pl: 4 }}>
-                            {topicsOf(r.content).map((topic, i) => (
-                              <Typography component="li" variant="body2" key={i}>
-                                {topic}
-                              </Typography>
-                            ))}
-                          </Box>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  </Fragment>
+                  <PlanCourseRow key={r.key} row={r} open={openKeys.has(r.key)} onChange={updateRow}
+                    onToggle={toggleOpen} onEditContent={editContent} onDelete={deleteRow} />
                 ))}
               </TableBody>
               {totals.length > 0 && (
