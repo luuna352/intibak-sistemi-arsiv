@@ -110,33 +110,45 @@ export default function MatchTable({ matches, onChange, results, planCourses, se
                 <Typography variant="caption" color="text.secondary">
                   Karşı kurumun dersi (birden çok ders birleştirilebilir)
                 </Typography>
-                {m.incoming.map((c, j) => (
-                  <Box key={c.key} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 1 }}>
-                    <TextField size="small" label="Ders adı" value={c.name} disabled={disabled}
-                      onChange={(e) => updateIncoming(m, c.key, 'name', e.target.value)} sx={{ flex: 1, minWidth: 180 }} />
-                    <TextField size="small" label="Kredi" value={c.credit} disabled={disabled}
-                      onChange={(e) => updateIncoming(m, c.key, 'credit', e.target.value)} sx={{ width: 70 }} />
-                    <TextField size="small" label="AKTS" value={c.ects} disabled={disabled}
-                      onChange={(e) => updateIncoming(m, c.key, 'ects', e.target.value)} sx={{ width: 70 }} />
-                    <TextField size="small" label="Not" value={c.grade} disabled={disabled}
-                      onChange={(e) => updateIncoming(m, c.key, 'grade', e.target.value)} sx={{ width: 70 }} />
-                    <TextField select size="small" label="Dil" value={c.language} disabled={disabled}
-                      onChange={(e) => updateIncoming(m, c.key, 'language', e.target.value)} sx={{ width: 72 }}>
-                      <MenuItem value="TR">TR</MenuItem>
-                      <MenuItem value="EN">EN</MenuItem>
-                    </TextField>
-                    {/* Notun seçilen PT tablosuna göre Yalova karşılığı. */}
-                    <Typography variant="body2" sx={{ width: 48 }}>
-                      {converted[j] ? `→ ${converted[j]}` : ''}
-                    </Typography>
-                    {m.incoming.length > 1 && (
-                      <IconButton size="small" aria-label="Karşı dersi çıkar" disabled={disabled}
-                        onClick={() => update(m.key, { incoming: m.incoming.filter((x) => x.key !== c.key) })}>
-                        <DeleteOutlined fontSize="small" />
-                      </IconButton>
-                    )}
-                  </Box>
-                ))}
+                {m.incoming.map((c, j) => {
+                  // BL: önceki üniversitede alınıp oraya notsuz geçirilmiş ders. Bizde harf notu işlediği için gerçek
+                  // harf öğrencinin önceki kaydının transkriptinden yazılır; ipucu satırın altında gösterilir.
+                  const isBL = c.grade.trim().toLocaleUpperCase('tr') === 'BL'
+                  return (
+                    <Box key={c.key} sx={{ mt: 1 }}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <TextField size="small" label="Ders adı" value={c.name} disabled={disabled}
+                          onChange={(e) => updateIncoming(m, c.key, 'name', e.target.value)} sx={{ flex: 1, minWidth: 180 }} />
+                        <TextField size="small" label="Kredi" value={c.credit} disabled={disabled}
+                          onChange={(e) => updateIncoming(m, c.key, 'credit', e.target.value)} sx={{ width: 70 }} />
+                        <TextField size="small" label="AKTS" value={c.ects} disabled={disabled}
+                          onChange={(e) => updateIncoming(m, c.key, 'ects', e.target.value)} sx={{ width: 70 }} />
+                        <TextField size="small" label="Not" value={c.grade} disabled={disabled} error={isBL}
+                          onChange={(e) => updateIncoming(m, c.key, 'grade', e.target.value)} sx={{ width: 70 }} />
+                        <TextField select size="small" label="Dil" value={c.language} disabled={disabled}
+                          onChange={(e) => updateIncoming(m, c.key, 'language', e.target.value)} sx={{ width: 72 }}>
+                          <MenuItem value="TR">TR</MenuItem>
+                          <MenuItem value="EN">EN</MenuItem>
+                        </TextField>
+                        {/* Notun seçilen PT tablosuna göre Yalova karşılığı. */}
+                        <Typography variant="body2" sx={{ width: 48 }}>
+                          {converted[j] ? `→ ${converted[j]}` : ''}
+                        </Typography>
+                        {m.incoming.length > 1 && (
+                          <IconButton size="small" aria-label="Karşı dersi çıkar" disabled={disabled}
+                            onClick={() => update(m.key, { incoming: m.incoming.filter((x) => x.key !== c.key) })}>
+                            <DeleteOutlined fontSize="small" />
+                          </IconButton>
+                        )}
+                      </Box>
+                      {isBL && (
+                        <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+                          BL notsuzdur: gerçek harf notunu öğrencinin önceki kaydının transkriptinden yazın.
+                        </Typography>
+                      )}
+                    </Box>
+                  )
+                })}
                 <Button size="small" sx={{ mt: 1 }} disabled={disabled}
                   onClick={() => update(m.key, { incoming: [...m.incoming, emptyIncoming()] })}>
                   + Karşı ders ekle (çoğa-bir)

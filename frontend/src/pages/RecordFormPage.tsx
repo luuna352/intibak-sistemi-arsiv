@@ -13,7 +13,9 @@ import Typography from '@mui/material/Typography'
 import { api } from '../api/client'
 import GradeTablePreview from '../records/GradeTablePreview'
 import MatchTable from '../records/MatchTable'
-import StudentDocument from '../records/StudentDocument'
+import RecordDocuments from '../records/RecordDocuments'
+import SameStudentRecords from '../records/SameStudentRecords'
+import { EMPTY_PENDING, uploadPending, type PendingDocuments } from '../records/documents'
 import {
   DEPARTMENT_LANGUAGE_OPTIONS,
   PREP_OPTIONS,
@@ -95,8 +97,11 @@ export default function RecordFormPage() {
   const [planId, setPlanId] = useState('')
   const [planCourses, setPlanCourses] = useState<YalovaCourse[]>([])
   const [matches, setMatches] = useState<EditMatch[]>([])
-  // Öğrencinin ders içerik belgesinin bölümleri: sadece bu sayfa açıkken tutulur, kayda gitmez.
+  // Öğrencinin ders içeriklerinin bölümleri ("Belgede bul" için): kayıtlı içerik belgesinden ya da içerikler
+  // transkriptteyse transkriptten okunur (RecordDocuments).
   const [sections, setSections] = useState<DocumentSection[]>([])
+  // Yeni kayıtta seçilen transkript/içerik dosyaları: "Kaydet" ile kayıt oluşunca yüklenir.
+  const [pendingDocs, setPendingDocs] = useState<PendingDocuments>(EMPTY_PENDING)
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null)
   const [suggested, setSuggested] = useState<(Resolution & { classLevel: number }) | null>(null)
   // Yerleşim kararı: boş = sistemin önerisini kullan; "2-4" = komisyon 2. sınıf 4. dönem dedi.
@@ -215,10 +220,16 @@ export default function RecordFormPage() {
       const saved = record
         ? await api<Detail>(`/api/records/${record.id}`, { method: 'PUT', body })
         : await api<Detail>('/api/records', { method: 'POST', body })
+      // Yeni kayıtta bekleyen belgeler, kayıt numarası alınınca yüklenir. Yüklenemezse kayıt yine açılmış olur;
+      // dosya Belgeler bölümünden tekrar yüklenir.
+      const uploadError = record ? null : await uploadPending(saved.id, pendingDocs)
+      if (!record) setPendingDocs(EMPTY_PENDING)
       show(saved)
       // Her kayıt yeniden onay ister: sonraki değişiklikte kutu tekrar işaretlenmeli.
       setConfirmed(false)
-      setMessage({ type: 'success', text: 'Kayıt kaydedildi.' })
+      setMessage(uploadError
+        ? { type: 'error', text: `Kayıt kaydedildi ama belge yüklenemedi: ${uploadError}` }
+        : { type: 'success', text: 'Kayıt kaydedildi.' })
       // Yeni kayıt açıldıysa adres kaydın adresine çevrilir (yenilenince aynı kayıt açılsın).
       if (!record) navigate(`/kayitlar/${saved.id}`, { replace: true })
     } catch (e) {
@@ -305,6 +316,16 @@ export default function RecordFormPage() {
             ))}
           </TextField>
         </Box>
+        {/* Aynı TC'li başka kayıt varsa (öğrenci birden çok yatay geçiş yaptıysa) burada listelenir. */}
+        <SameStudentRecords tcNo={form.tcNo} excludeId={record?.id ?? null} />
+      </Paper>
+
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          Belgeler
+        </Typography>
+        <RecordDocuments recordId={record?.id ?? null} pending={pendingDocs} onPendingChange={setPendingDocs}
+          onSections={setSections} disabled={cancelled} />
       </Paper>
 
       <Paper sx={{ p: 2, mb: 2 }}>
@@ -334,7 +355,6 @@ export default function RecordFormPage() {
             Henüz ders planı yüklenmemiş. Ayarlar &gt; Ders planları'ndan yükleyin.
           </Alert>
         )}
-        <StudentDocument sections={sections} onChange={setSections} disabled={cancelled} />
         <MatchTable matches={matches} onChange={setMatches} results={evaluation?.matches ?? []}
           planCourses={planCourses} sections={sections} disabled={cancelled} />
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
