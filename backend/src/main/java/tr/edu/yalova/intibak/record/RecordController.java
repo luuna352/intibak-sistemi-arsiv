@@ -44,6 +44,13 @@ public class RecordController {
         return service.transferTypes();
     }
 
+    /** /api/records/same-student?tc=...&excludeId=5: aynı TC'li diğer kayıtlar (formdaki "diğer kayıtlar" kutusu). */
+    @GetMapping("/same-student")
+    public List<RecordService.ListItem> sameStudent(@RequestParam String tc,
+            @RequestParam(required = false) Long excludeId) {
+        return service.sameStudent(tc, excludeId);
+    }
+
     @GetMapping("/status-counts")
     public List<RecordService.StatusCount> statusCounts() {
         return service.statusCounts();

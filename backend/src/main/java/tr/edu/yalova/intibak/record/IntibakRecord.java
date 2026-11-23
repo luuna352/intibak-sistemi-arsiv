@@ -69,6 +69,10 @@ public class IntibakRecord {
     @Column(name = "placement_semester")
     private Integer placementSemester;
 
+    // V13: öğrencinin ders içerikleri transkriptin içinde mi (o zaman ayrı içerik belgesi yüklenmez).
+    @Column(name = "content_in_transcript", nullable = false)
+    private boolean contentInTranscript;
+
     // Ders eşleştirme satırları; kayıtla birlikte kaydedilir, listeden çıkan satır silinir.
     @OneToMany(mappedBy = "record", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position")
@@ -134,6 +138,15 @@ public class IntibakRecord {
 
     public boolean isCancelled() {
         return status == RecordStatus.IPTAL;
+    }
+
+    public boolean isContentInTranscript() {
+        return contentInTranscript;
+    }
+
+    /** İçerikler transkriptte mi (belgeler bölümündeki kutu). Kaydın durumunu değiştirmez. */
+    public void setContentInTranscript(boolean contentInTranscript) {
+        this.contentInTranscript = contentInTranscript;
     }
 
     /** Eşleştirme tablosunu (PT, plan ve satırlar) ekrandaki haliyle değiştirir. */

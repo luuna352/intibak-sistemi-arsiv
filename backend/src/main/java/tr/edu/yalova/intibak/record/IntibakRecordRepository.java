@@ -12,4 +12,7 @@ public interface IntibakRecordRepository extends JpaRepository<IntibakRecord, Lo
 
     /** "İptal edilenleri göster" işaretliyse: tüm kayıtlar, en yenisi üstte. */
     List<IntibakRecord> findAllByOrderByCreatedAtDesc();
+
+    /** Aynı öğrencinin (aynı TC) bütün kayıtları, en eskisi üstte (1., 2. üniversite sırası). */
+    List<IntibakRecord> findByTcNoOrderByCreatedAtAsc(String tcNo);
 }

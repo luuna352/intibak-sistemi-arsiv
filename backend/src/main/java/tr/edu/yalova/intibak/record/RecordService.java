@@ -146,6 +146,24 @@ public class RecordService {
     }
 
     /**
+     * Aynı öğrencinin (aynı TC) diğer kayıtları, iptal edilenler dahil, en eskisi üstte. Öğrenci birden çok yatay
+     * geçiş yaptıysa her önceki üniversite ayrı kayıttır; komisyon BL gibi notsuz geçirilmiş dersin gerçek harfini
+     * diğer kaydın transkriptinden bulur. excludeId: formda açık olan kayıt (listede tekrar görünmesin). TC geçersizse
+     * boş liste (form yazılırken her harfte sorulabilir).
+     */
+    @Transactional(readOnly = true)
+    public List<ListItem> sameStudent(String tcNo, Long excludeId) {
+        String tc = tcNo == null ? "" : tcNo.replace(" ", "");
+        if (!TcNo.isValid(tc)) {
+            return List.of();
+        }
+        return repository.findByTcNoOrderByCreatedAtAsc(tc).stream()
+                .filter(r -> excludeId == null || !excludeId.equals(r.getId()))
+                .map(RecordService::toListItem)
+                .toList();
+    }
+
+    /**
      * Önizleme: formdaki eşleştirmeyi kaydetmeden hesaplar (ekrandaki "Yalova notu", "sayılan kredi", "sınıf"
      * alanları her değişiklikte bununla güncellenir). Yarım girilmiş satırlar hata vermez, sorun olarak döner.
      */
