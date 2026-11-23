@@ -72,7 +72,8 @@ public class RecordService {
     public record Detail(Long id, String tcNo, String fullName, TransferType transferType, String transferTypeLabel,
             String university, String facultyDepartment, LocalDate registrationDate, RecordStatus status,
             String statusLabel, String createdByName, Instant createdAt, String updatedByName, Instant updatedAt,
-            Long gradeTableId, Long planId, Evaluation evaluation) {
+            Long gradeTableId, Long planId, Evaluation evaluation, Integer placementClassLevel,
+            Integer placementSemester) {
     }
 
     /** Formdan gelen ders. grade sadece karşı kurum dersinde dolu olur. */
@@ -85,11 +86,12 @@ public class RecordService {
 
     /**
      * Formun tamamı: öğrenci bilgileri, PT, plan, eşleştirme satırları ve "Kontrol ettim / Onaylıyorum" kutusu.
-     * Kutu işaretli değilse (confirmed != true) kayıt yapılmaz.
+     * Kutu işaretli değilse (confirmed != true) kayıt yapılmaz. placementClassLevel/placementSemester: komisyonun
+     * sınıf/dönem kararı; ikisi de boşsa sistemin önerisi geçerlidir.
      */
     public record Input(String tcNo, String fullName, TransferType transferType, String university,
             String facultyDepartment, LocalDate registrationDate, Long gradeTableId, Long planId,
-            List<MatchInput> matches, Boolean confirmed) {
+            List<MatchInput> matches, Integer placementClassLevel, Integer placementSemester, Boolean confirmed) {
     }
 
     /** Açılır liste seçeneği: {"value": "YATAY", "label": "Yatay geçiş"}. */
@@ -140,6 +142,7 @@ public class RecordService {
         Prepared prepared = prepare(input);
         IntibakRecord record = new IntibakRecord(prepared.info(), actorName, Instant.now(clock));
         record.replaceMatches(input.gradeTableId(), input.planId(), prepared.matches());
+        record.decidePlacement(input.placementClassLevel(), input.placementSemester());
         return toDetail(repository.save(record));
     }
 
@@ -152,6 +155,7 @@ public class RecordService {
         Prepared prepared = prepare(input);
         record.update(prepared.info(), actorName, Instant.now(clock));
         record.replaceMatches(input.gradeTableId(), input.planId(), prepared.matches());
+        record.decidePlacement(input.placementClassLevel(), input.placementSemester());
         return toDetail(record);
     }
 
@@ -209,6 +213,7 @@ public class RecordService {
         if (in.planId() != null && !plans.existsById(in.planId())) {
             throw new BadRequestException("Seçilen ders planı bulunamadı.");
         }
+        checkPlacement(in.placementClassLevel(), in.placementSemester());
 
         List<MatchInput> inputs = in.matches() == null ? List.of() : in.matches();
         List<MatchCalculator.MatchIn> ins = new ArrayList<>();
@@ -277,6 +282,22 @@ public class RecordService {
         String grade = side == MatchSide.INCOMING ? text(c.grade(), 10, prefix + name + " notu") : null;
         return new IntibakMatchCourse(position, side, text(c.code(), 20, prefix + "ders kodu"), name, c.credit(),
                 c.ects(), c.language() == null ? CourseLanguage.TR : c.language(), grade);
+    }
+
+    /**
+     * Komisyonun sınıf/dönem kararı: ikisi de boş (sistemin önerisi) ya da ikisi birlikte; sınıf 1-4 ve dönem o
+     * sınıfın iki döneminden biri (2. sınıf: 3 ya da 4). Veritabanındaki CHECK kuralıyla aynı; burada anlaşılır bir
+     * mesaj vermek için tekrar kontrol edilir.
+     */
+    static void checkPlacement(Integer classLevel, Integer semester) {
+        if (classLevel == null && semester == null) {
+            return;
+        }
+        if (classLevel == null || semester == null || classLevel < 1 || classLevel > 4
+                || (semester != classLevel * 2 - 1 && semester != classLevel * 2)) {
+            throw new BadRequestException("Sınıf/dönem kararı geçersiz: sınıf 1-4 olmalı, dönem o sınıfın dönemlerinden"
+                    + " biri olmalı (örn. 2. sınıf: 3 ya da 4. dönem).");
+        }
     }
 
     private static void checkNumber(BigDecimal value, String field) {
@@ -363,6 +384,7 @@ public class RecordService {
         return new Detail(r.getId(), r.getTcNo(), r.getFullName(), r.getTransferType(), r.getTransferType().label(),
                 r.getUniversity(), r.getFacultyDepartment(), r.getRegistrationDate(), r.getStatus(),
                 r.getStatus().label(), r.getCreatedByName(), r.getCreatedAt(), r.getUpdatedByName(),
-                r.getUpdatedAt(), r.getGradeTableId(), r.getPlanId(), evaluation);
+                r.getUpdatedAt(), r.getGradeTableId(), r.getPlanId(), evaluation, r.getPlacementClassLevel(),
+                r.getPlacementSemester());
     }
 }

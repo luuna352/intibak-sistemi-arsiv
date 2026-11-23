@@ -53,6 +53,13 @@ public class IntibakRecord {
     @Column(name = "plan_id")
     private Long planId;
 
+    // Komisyonun sınıf/dönem kararı (V8). Boşsa sistemin önerisi (MatchCalculator.place) geçerlidir.
+    @Column(name = "placement_class_level")
+    private Integer placementClassLevel;
+
+    @Column(name = "placement_semester")
+    private Integer placementSemester;
+
     // Ders eşleştirme satırları; kayıtla birlikte kaydedilir, listeden çıkan satır silinir.
     @OneToMany(mappedBy = "record", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position")
@@ -130,6 +137,12 @@ public class IntibakRecord {
         }
     }
 
+    /** Komisyonun sınıf/dönem kararı; ikisi de null = sistemin önerisi kullanılır (kontrol RecordService'te). */
+    public void decidePlacement(Integer classLevel, Integer semester) {
+        this.placementClassLevel = classLevel;
+        this.placementSemester = semester;
+    }
+
     private void apply(StudentInfo info) {
         this.tcNo = info.tcNo();
         this.fullName = info.fullName();
@@ -178,6 +191,14 @@ public class IntibakRecord {
 
     public Long getPlanId() {
         return planId;
+    }
+
+    public Integer getPlacementClassLevel() {
+        return placementClassLevel;
+    }
+
+    public Integer getPlacementSemester() {
+        return placementSemester;
     }
 
     public List<IntibakMatch> getMatches() {

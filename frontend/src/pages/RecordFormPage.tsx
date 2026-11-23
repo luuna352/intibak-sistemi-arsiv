@@ -30,7 +30,17 @@ type PlanSummary = { id: number; startYear: number; label: string }
 type PlanDetail = { id: number; label: string; courses: YalovaCourse[] }
 type Resolution = { requestedLabel: string; planId: number | null; planLabel: string | null }
 // Kayıt detayı: öğrenci bilgileri + PT, plan ve eşleştirmenin hesaplanmış hali.
-type Detail = RecordDetail & { gradeTableId: number | null; planId: number | null; evaluation: Evaluation }
+type Detail = RecordDetail & {
+  gradeTableId: number | null
+  planId: number | null
+  evaluation: Evaluation
+  // Komisyonun sınıf/dönem kararı; ikisi de null ise sistemin önerisi geçerli.
+  placementClassLevel: number | null
+  placementSemester: number | null
+}
+
+// Komisyonun seçebileceği sınıf/dönemler: 1. sınıf (1. ve 2. dönem) ... 4. sınıf (7. ve 8. dönem). Değer "2-3" gibi.
+const PLACEMENTS = [1, 2, 3, 4].flatMap((c) => [c * 2 - 1, c * 2].map((s) => ({ value: `${c}-${s}`, classLevel: c, semester: s })))
 
 // Formdaki kutular: hepsi metin; boş kutu backend'e boş metin gider, backend null yapar.
 type Form = {
@@ -69,6 +79,8 @@ export default function RecordFormPage() {
   const [matches, setMatches] = useState<EditMatch[]>([])
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null)
   const [suggested, setSuggested] = useState<(Resolution & { classLevel: number }) | null>(null)
+  // Yerleşim kararı: boş = sistemin önerisini kullan; "2-4" = komisyon 2. sınıf 4. dönem dedi.
+  const [placementChoice, setPlacementChoice] = useState("")
   const [confirmed, setConfirmed] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -129,8 +141,10 @@ export default function RecordFormPage() {
     return () => clearTimeout(timer)
   }, [form.transferType, gradeTableId, matches])
 
-  // Hesaplanan sınıfa göre hangi planın kullanılması gerektiği (aktif yıl kuralı + en yakın eski plan).
-  const classLevel = evaluation?.placement.classLevel
+  // Geçerli sınıf: komisyon karar verdiyse o, vermediyse sistemin önerisi. Plan önerisi bu sınıfa göre yapılır.
+  const decided = PLACEMENTS.find((p) => p.value === placementChoice)
+  const classLevel = decided?.classLevel ?? evaluation?.placement.classLevel
+  // Hangi planın kullanılması gerektiği (aktif yıl kuralı + en yakın eski plan).
   useEffect(() => {
     const planYear = activeYear?.classPlans.find((c) => c.classLevel === classLevel)?.planYear
     if (!planYear) return
@@ -147,6 +161,9 @@ export default function RecordFormPage() {
     setPlanId(d.planId === null ? '' : String(d.planId))
     setMatches(d.evaluation.matches.map(toEditMatch))
     setEvaluation(d.evaluation)
+    setPlacementChoice(
+      d.placementClassLevel !== null && d.placementSemester !== null ? `${d.placementClassLevel}-${d.placementSemester}` : "",
+    )
   }
 
   const set = (field: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -162,6 +179,8 @@ export default function RecordFormPage() {
       gradeTableId: gradeTableId === '' ? null : Number(gradeTableId),
       planId: planId === '' ? null : Number(planId),
       matches: matches.map(toMatchInput),
+      placementClassLevel: decided?.classLevel ?? null,
+      placementSemester: decided?.semester ?? null,
       confirmed,
     }
     try {
@@ -281,18 +300,35 @@ export default function RecordFormPage() {
       </Paper>
 
       <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6">Yerleşim (otomatik)</Typography>
+        <Typography variant="h6">Yerleşim</Typography>
         {placement && (
           <>
             <Typography>
               Sayılan toplam kredi: <b>{placement.countedCredit}</b>
             </Typography>
             <Typography>
-              Yerleşeceği sınıf/dönem: <b>{placement.classLevel}. sınıf ({placement.semester}. dönem)</b>
+              Sistemin önerisi: <b>{placement.classLevel}. sınıf ({placement.semester}. dönem)</b>
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {placement.reason}
             </Typography>
+            {/* Sistem sadece önerir; komisyon farklı karar verebilir (kural 7-8). Boş seçim = öneri geçerli. */}
+            <TextField select size="small" label="Komisyon kararı" value={placementChoice} disabled={cancelled}
+              onChange={(e) => setPlacementChoice(e.target.value)} sx={{ mt: 2, minWidth: 260 }}
+              slotProps={{ inputLabel: { shrink: true }, select: { displayEmpty: true } }}>
+              <MenuItem value="">Önerilen: {placement.classLevel}. sınıf ({placement.semester}. dönem)</MenuItem>
+              {PLACEMENTS.map((p) => (
+                <MenuItem key={p.value} value={p.value}>
+                  {p.classLevel}. sınıf ({p.semester}. dönem)
+                </MenuItem>
+              ))}
+            </TextField>
+            {decided && (
+              <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>
+                Komisyon kararı geçerli: {decided.classLevel}. sınıf ({decided.semester}. dönem). Öneriye dönmek için
+                "Önerilen" seçeneğini seçin.
+              </Typography>
+            )}
           </>
         )}
         {suggested && (
