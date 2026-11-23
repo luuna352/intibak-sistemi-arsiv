@@ -17,7 +17,8 @@ import tr.edu.yalova.intibak.grade.YalovaGrade;
  * İntibak formunun hesapları (veritabanına dokunmaz, sadece hesaplar; bu yüzden kolay test edilir):
  * 1) Karşı kurum notunu seçilen PT tablosuyla Yalova harf notuna çevirir.
  * 2) Bir satırda birden çok karşı ders varsa (çoğa-bir) notları kredi ağırlıklı birleştirir.
- * 3) Satırın sayılmasına engel durumları bulur (eksik ders, tabloda olmayan not, başarısız not, dil farkı).
+ * 3) Satırın sorunlarını iki gruba ayırır: eksik bilgi (problems: hesap yapılamaz, satır sayılamaz) ve kural
+ *    önerisi (warnings: kurala göre "sayılmaz" önerilir ama komisyon yine de sayabilir; kural 8).
  * 4) Sayılan satırların Yalova kredisini toplar ve sınıf/dönemi bulur.
  * "Öğrenci lehine en yüksek karşılık" kuralı iki yerde uygulanır: puan iki aralığın arasında kalırsa üstteki aralık,
  * birleşik notun ortalaması iki harfin arasında kalırsa üstteki harf seçilir (komisyonca doğrulanacak).
@@ -44,10 +45,16 @@ final class MatchCalculator {
 
     /**
      * Bir satırın sonucu: her karşı dersin Yalova karşılığı (çevrilemediyse null), satırın birleşik notu,
-     * satırdaki Yalova derslerinin kredi toplamı ve satırın sayılmasına engel olan sorunlar.
+     * satırdaki Yalova derslerinin kredi toplamı, eksik bilgiler (problems: satır sayılamaz) ve kural önerileri
+     * (warnings: sistem "sayılmaz" önerir, karar komisyonun).
      */
     record MatchResult(List<YalovaGrade> incomingGrades, YalovaGrade grade, BigDecimal yalovaCredit,
-            List<String> problems) {
+            List<String> problems, List<String> warnings) {
+
+        /** Sistemin önerisi: eksik bilgi ve kural uyarısı yoksa "sayılsın". */
+        boolean suggestCounted() {
+            return problems.isEmpty() && warnings.isEmpty();
+        }
     }
 
     /** Yerleşim: sayılan toplam kredi, sınıf (1-3), dönem (1, 3, 5) ve gerekçe metni. */
@@ -64,7 +71,8 @@ final class MatchCalculator {
         for (MatchIn match : matches) {
             MatchResult result = evaluate(match, rows);
             results.add(result);
-            // Sorunlu satır, "sayıldı" işaretli olsa bile toplama girmez (kaydetmede de engellenir).
+            // Eksik bilgili satır "sayıldı" işaretli olsa bile toplama girmez (kaydetmede de engellenir). Kural
+            // uyarısı olan satır ise komisyon "sayıldı" dediyse toplama girer.
             if (match.counted() && result.problems().isEmpty()) {
                 countedCredit = countedCredit.add(result.yalovaCredit());
             }
@@ -99,21 +107,23 @@ final class MatchCalculator {
             grades.add(converted);
         }
 
+        // Buradan sonrası kural önerisi: sistem "sayılmaz" der, komisyon yine de sayabilir.
+        List<String> warnings = new ArrayList<>();
         YalovaGrade grade = grades.isEmpty() || grades.contains(null) ? null : combine(match.incoming(), grades);
         if (grade != null && FAILING.contains(grade)) {
-            problems.add("Başarısız not (" + grade + ") ile ders muaf sayılmaz.");
+            warnings.add("Başarısız not (" + grade + ") ile ders muaf sayılmaz.");
         }
-        // İngilizce Yalova dersi, Türkçe verilmiş dersle karşılanamaz.
+        // Kural 1: İngilizce Yalova dersi, Türkçe verilmiş dersle karşılanmaz.
         boolean yalovaEnglish = match.yalova().stream().anyMatch(c -> c.language() == CourseLanguage.EN);
         boolean incomingTurkish = match.incoming().stream().anyMatch(c -> c.language() != CourseLanguage.EN);
         if (yalovaEnglish && incomingTurkish) {
-            problems.add("Eğitim dili farklı: İngilizce Yalova dersi Türkçe dersle sayılmaz.");
+            warnings.add("Eğitim dili farklı: İngilizce Yalova dersi Türkçe dersle sayılmaz.");
         }
 
         BigDecimal yalovaCredit = match.yalova().stream()
                 .map(CourseIn::credit).filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new MatchResult(grades, grade, yalovaCredit, problems);
+        return new MatchResult(grades, grade, yalovaCredit, problems, warnings);
     }
 
     /**

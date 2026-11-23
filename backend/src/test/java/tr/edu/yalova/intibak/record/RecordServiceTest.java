@@ -160,12 +160,22 @@ class RecordServiceTest {
         assertThat(view.problems()).isEmpty();
         assertThat(saved.evaluation().placement().classLevel()).isEqualTo(2);
 
-        // Aynı satır dil farkıyla (Türkçe ders -> İngilizce Yalova dersi) sayılamaz: kayıt reddedilir.
+        // Dil farkı (Türkçe ders -> İngilizce Yalova dersi) sadece öneridir: komisyon sayarsa kayıt yapılır, uyarı durur.
         RecordService.MatchInput turkish = new RecordService.MatchInput(true,
                 List.of(new RecordService.CourseInput(null, "Programlama", null, null, CourseLanguage.TR, "95")),
                 match.yalova());
+        RecordService.MatchView warned = service.create(new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY,
+                null, null, null, 1L, null, List.of(turkish), null, null, true), "x").evaluation().matches().get(0);
+        assertThat(warned.counted()).isTrue();
+        assertThat(warned.suggestCounted()).isFalse();
+        assertThat(warned.warnings()).anyMatch(w -> w.contains("Eğitim dili farklı"));
+
+        // Eksik bilgi (not yok) ise "sayıldı" işaretli satır kaydedilemez.
+        RecordService.MatchInput noGrade = new RecordService.MatchInput(true,
+                List.of(new RecordService.CourseInput(null, "Programlama", null, null, CourseLanguage.EN, "")),
+                match.yalova());
         assertThatThrownBy(() -> service.create(new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY,
-                null, null, null, 1L, null, List.of(turkish), null, null, true), "x"))
+                null, null, null, 1L, null, List.of(noGrade), null, null, true), "x"))
                 .hasMessageContaining("1. satır sayılamaz");
     }
 

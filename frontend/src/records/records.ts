@@ -65,7 +65,12 @@ export type MatchView = {
   yalova: CourseView[]
   grade: string | null
   yalovaCredit: number
+  // Eksik bilgi: satır bu haliyle sayılamaz (not yok, ders seçilmemiş...).
   problems: string[]
+  // Kural önerisi: sistem "sayılmaz" der ama komisyon yine de sayabilir (dil farkı, başarısız not...).
+  warnings: string[]
+  // Sistemin önerisi: eksik bilgi ve kural uyarısı yoksa true.
+  suggestCounted: boolean
 }
 
 export type Placement = { countedCredit: number; classLevel: number; semester: number; reason: string }
@@ -78,14 +83,28 @@ export type EditIncoming = { key: number; name: string; credit: string; ects: st
 // Plandan seçilen Yalova dersi (kayda metin olarak kopyalanır).
 export type YalovaCourse = { code: string | null; name: string; credit: number | null; ects: number | null; language: Language }
 
-export type EditMatch = { key: number; counted: boolean; incoming: EditIncoming[]; yalova: YalovaCourse[] }
+// countedTouched: komisyon "Sayıldı mı?" kutusuna kendisi dokundu mu? Dokunmadıysa kutu sistemin önerisini izler;
+// dokunduysa (ya da kayıt açıldıysa) komisyonun kararı korunur.
+export type EditMatch = {
+  key: number
+  counted: boolean
+  countedTouched: boolean
+  incoming: EditIncoming[]
+  yalova: YalovaCourse[]
+}
 
 let nextKey = 1
 export const newKey = () => nextKey++
 
 export const emptyIncoming = (): EditIncoming => ({ key: newKey(), name: '', credit: '', ects: '', grade: '', language: 'TR' })
 
-export const emptyMatch = (): EditMatch => ({ key: newKey(), counted: true, incoming: [emptyIncoming()], yalova: [] })
+export const emptyMatch = (): EditMatch => ({
+  key: newKey(),
+  counted: true,
+  countedTouched: false,
+  incoming: [emptyIncoming()],
+  yalova: [],
+})
 
 // "3,5" gibi Türkçe virgüllü yazımı da kabul eder; boş kutu = değer yok (null).
 export const toNumber = (s: string): number | null => (s.trim() === '' ? null : Number(s.replace(',', '.')))
@@ -95,6 +114,8 @@ export function toEditMatch(m: MatchView): EditMatch {
   return {
     key: newKey(),
     counted: m.counted,
+    // Kaydedilmiş karar komisyonundur: sistem önerisi onu değiştirmez.
+    countedTouched: true,
     incoming: m.incoming.map((c) => ({
       key: newKey(),
       name: c.name,
@@ -120,4 +141,21 @@ export function toMatchInput(m: EditMatch) {
     })),
     yalova: m.yalova,
   }
+}
+
+/**
+ * Komisyonun dokunmadığı satırlarda "Sayıldı mı?" kutusunu sistemin önerisine getirir (kural 8: sistem önerir,
+ * komisyon karar verir). keys: önizleme istenirken satırların sırası; cevap gelene kadar satır silinmiş olabilir,
+ * bu yüzden satırlar sıra numarasıyla değil key ile eşleştirilir. Eksik bilgili satırda öneri yoktur, kutuya
+ * dokunulmaz. Değişiklik yoksa aynı dizi döner (React gereksiz yere yeniden hesaplatmasın).
+ */
+export function applySuggestions(matches: EditMatch[], keys: number[], results: MatchView[]): EditMatch[] {
+  let changed = false
+  const next = matches.map((m) => {
+    const r = results[keys.indexOf(m.key)]
+    if (!r || m.countedTouched || r.problems.length > 0 || m.counted === r.suggestCounted) return m
+    changed = true
+    return { ...m, counted: r.suggestCounted }
+  })
+  return changed ? next : matches
 }

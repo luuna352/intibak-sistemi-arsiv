@@ -14,6 +14,7 @@ import { api } from '../api/client'
 import GradeTablePreview from '../records/GradeTablePreview'
 import MatchTable from '../records/MatchTable'
 import {
+  applySuggestions,
   statusColor,
   toEditMatch,
   toMatchInput,
@@ -125,6 +126,7 @@ export default function RecordFormPage() {
   // yerde (backend MatchCalculator) durur; ekran sadece sonucu gösterir.
   useEffect(() => {
     const timer = setTimeout(() => {
+      const keys = matches.map((m) => m.key)
       api<Evaluation>('/api/records/evaluate', {
         method: 'POST',
         body: {
@@ -133,7 +135,11 @@ export default function RecordFormPage() {
           matches: matches.map(toMatchInput),
         },
       })
-        .then(setEvaluation)
+        .then((e) => {
+          setEvaluation(e)
+          // Komisyonun dokunmadığı satırlarda "Sayıldı mı?" sistemin önerisini izler.
+          setMatches((current) => applySuggestions(current, keys, e.matches))
+        })
         .catch(() => {
           // Önizleme hatası formu engellemez; kaydederken kurallar ayrıca kontrol edilir.
         })
@@ -293,7 +299,7 @@ export default function RecordFormPage() {
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Notlar seçilen PT tablosuyla Yalova notuna çevrilir. Puan iki aralığın arasında kalırsa ya da birleştirilen
           derslerin ortalaması iki harf arasında kalırsa öğrenci lehine üstteki not verilir. İngilizce Yalova dersi
-          Türkçe dersle sayılmaz; FD/FF/DZ notuyla ders sayılmaz.
+          Türkçe dersle ve FD/FF/DZ notuyla sistem "sayılmaz" önerir; komisyon yine de sayabilir.
         </Typography>
         {/* Seçilen PT tablosu burada da görünür: kontrol için başka sayfaya gitmeye gerek kalmasın. */}
         <GradeTablePreview gradeTableId={gradeTableId} />

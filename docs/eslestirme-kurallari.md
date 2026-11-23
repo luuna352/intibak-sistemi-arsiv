@@ -20,9 +20,9 @@ uygulanmaz; onlar en alttaki "Uygulanmayan öneriler" bölümünde soru olarak d
 
 | # | Kural | Sonuç |
 |---|---|---|
-| 1 | **Dil:** Yalova dersi İngilizce, karşı ders Türkçe | Doğrudan red (içeriğe bakılmaz) |
+| 1 | **Dil:** Yalova dersi İngilizce, karşı ders Türkçe | Sistem "sayılmaz" önerir (içeriğe bakılmaz); komisyon yine de sayabilir (kural 8) |
 | 2 | **Dil:** karşı ders İngilizce, Yalova dersi Türkçe | Red değil; sonraki kurallara geçilir (adlar farklı dilde olduğu için genelde 5. kurala gider) |
-| 2b | **Hazırlık:** karşı ders İngilizceyse öğrenci İngilizce hazırlığı geçmiş (ya da sınavla muaf) olmalı **veya** geldiği bölüm en az %30 İngilizce olmalı. İkisi de yoksa | O İngilizce ders sayılmaz. Hazırlık ve bölüm dili bilgisi girilmemişse de sayılmaz, bilgi istenir (kullanıcı onayı: 23 Kasım) |
+| 2b | **Hazırlık:** karşı ders İngilizceyse öğrenci İngilizce hazırlığı geçmiş (ya da sınavla muaf) olmalı **veya** geldiği bölüm en az %30 İngilizce olmalı. İkisi de yoksa | Sistem o İngilizce ders için "sayılmaz" önerir. Hazırlık ve bölüm dili bilgisi girilmemişse de öyle önerir ve bilgi ister; komisyon yine de sayabilir (kullanıcı onayı: 23 Kasım) |
 | 3 | **Türk Dili ve tarih (Atatürk İlkeleri ve İnkılap Tarihi) dersleri** | Doğrudan kabul |
 | 4 | **Ders adları aynı** | Doğrudan kabul |
 | 5 | **Ders adları farklı** | İki dersin içeriği yan yana karşılaştırılır. Sistem örtüşme yüzdesini gösterir; **kabul kararını komisyon verir** (sabit bir eşik yok) |
@@ -30,8 +30,10 @@ uygulanmaz; onlar en alttaki "Uygulanmayan öneriler" bölümünde soru olarak d
 | 7 | **Yerleşim:** sayılan kredi 30'dan az 1. sınıf; 30-60 (ikisi dahil) 2. sınıf 3. dönem; 60'tan fazla 3. sınıf 5. dönem; DGS her zaman 5. dönem | Sistem **önerir**, komisyon sınıfı ve dönemi değiştirebilir (kullanıcı onayı: 23 Kasım) |
 | 8 | **Esneklik:** sistem öneri ve kolaylık içindir, işi hızlandırır | Derslerle ilgili her sonuç (sayıldı mı, not, yerleşim) komisyon tarafından değiştirilebilir; kesin kurallar sadece öneriyi belirler, değiştirmeyi engellemez (kullanıcı onayı: 23 Kasım) |
 
-Ek olarak daha önce yapılmış ve değişmeyen kısımlar: not, seçilen PT tablosuyla Yalova harfine çevrilir; FD, FF, DZ
-ya da tabloda olmayan notla satır sayılmaz; "Sayıldı mı?" kutusu satırı silmeden sayımdan çıkarır.
+Ek olarak: not, seçilen PT tablosuyla Yalova harfine çevrilir; FD, FF, DZ
+notuyla sistem "sayılmaz" önerir (komisyon sayabilir); not girilmemişse ya da tabloda yoksa satır hesaplanamaz ve
+sayılamaz (eksik bilgi). "Sayıldı mı?" kutusu satırı silmeden sayımdan çıkarır; komisyon dokunmadıkça kutu sistemin
+önerisini izler.
 
 > Kullanıcı (23 Kasım): "Komisyon değiştirebilir olsun. Sistem önersin. Sistemde her şey değiştirilebilir olacak, bu
 > derslerle alakalı şeylerde esnek olacak yani. Öneri ve kolaylık için yapılıyor bu sistem, işleri hızlandırmak için."

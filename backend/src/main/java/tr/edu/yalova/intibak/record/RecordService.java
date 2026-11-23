@@ -60,9 +60,12 @@ public class RecordService {
             String grade, YalovaGrade convertedGrade) {
     }
 
-    /** Eşleştirme satırı ve hesap sonucu: birleşik not, Yalova kredisi ve satırın sayılmasına engel sorunlar. */
+    /**
+     * Eşleştirme satırı ve hesap sonucu: birleşik not, Yalova kredisi, eksik bilgiler (problems: satır sayılamaz),
+     * kural önerileri (warnings: komisyon yine de sayabilir) ve sistemin "sayılsın mı" önerisi.
+     */
     public record MatchView(boolean counted, List<CourseView> incoming, List<CourseView> yalova, YalovaGrade grade,
-            BigDecimal yalovaCredit, List<String> problems) {
+            BigDecimal yalovaCredit, List<String> problems, List<String> warnings, boolean suggestCounted) {
     }
 
     /** Formun hesap kısmı: satırların sonucu ve yerleşim (sayılan kredi, sınıf, dönem, gerekçe). */
@@ -200,7 +203,7 @@ public class RecordService {
 
     /**
      * Kaydetmeden önceki kontroller (sırayla): onay kutusu, öğrenci bilgileri, PT ve plan, her dersin alanları,
-     * "sayıldı" işaretli satırların sorunsuz olması. Bir kural tutmazsa hiçbir şey kaydedilmez.
+     * "sayıldı" işaretli satırlarda eksik bilgi olmaması (kural uyarısı engel değil: karar komisyonun). Bir kural tutmazsa hiçbir şey kaydedilmez.
      */
     private Prepared prepare(Input in) {
         if (in == null || !Boolean.TRUE.equals(in.confirmed())) {
@@ -236,7 +239,8 @@ public class RecordService {
                     toCalc(courses, MatchSide.YALOVA)));
         }
 
-        // "Sayıldı" işaretli satır sorunsuz olmalı (örn. tabloda olmayan not ya da dil farkıyla ders sayılamaz).
+        // "Sayıldı" işaretli satırda eksik bilgi olmamalı (örn. not girilmemiş ya da tabloda yok: hesap yapılamaz).
+        // Dil farkı, başarısız not gibi kural uyarıları kaydı engellemez; komisyon bilerek sayabilir (kural 8).
         List<GradeTableRow> rows = rowsOf(in.gradeTableId());
         for (int i = 0; i < ins.size(); i++) {
             MatchCalculator.MatchResult result = MatchCalculator.evaluate(ins.get(i), rows);
@@ -345,7 +349,8 @@ public class RecordService {
                 incoming.add(view(in.incoming().get(j), r.incomingGrades().get(j)));
             }
             List<CourseView> yalova = in.yalova().stream().map(c -> view(c, null)).toList();
-            views.add(new MatchView(in.counted(), incoming, yalova, r.grade(), r.yalovaCredit(), r.problems()));
+            views.add(new MatchView(in.counted(), incoming, yalova, r.grade(), r.yalovaCredit(), r.problems(),
+                    r.warnings(), r.suggestCounted()));
         }
         return new Evaluation(views, result.placement());
     }

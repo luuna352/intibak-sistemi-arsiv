@@ -79,28 +79,38 @@ class MatchCalculatorTest {
     }
 
     @Test
-    void problemsBlockCounting() {
+    void rulesOnlySuggestButMissingDataBlocks() {
+        // Kural uyarıları (dil farkı, başarısız not): sistem "sayılmaz" önerir, eksik bilgi değildir.
         MatchCalculator.MatchResult language = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
                 List.of(incoming("92", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.EN))), ROWS);
-        assertThat(language.problems()).anyMatch(p -> p.contains("Eğitim dili farklı"));
+        assertThat(language.warnings()).anyMatch(p -> p.contains("Eğitim dili farklı"));
+        assertThat(language.problems()).isEmpty();
+        assertThat(language.suggestCounted()).isFalse();
 
         MatchCalculator.MatchResult failing = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
                 List.of(incoming("30", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR))), ROWS);
-        assertThat(failing.problems()).anyMatch(p -> p.contains("Başarısız"));
+        assertThat(failing.warnings()).anyMatch(p -> p.contains("Başarısız"));
 
         MatchCalculator.MatchResult noTable = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
                 List.of(incoming("92", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR))), null);
         assertThat(noTable.problems()).anyMatch(p -> p.contains("PT"));
 
-        // Sorunlu satır "sayıldı" işaretli olsa da krediye girmez.
+        MatchCalculator.MatchResult noGrade = MatchCalculator.evaluate(new MatchCalculator.MatchIn(true,
+                List.of(incoming("", "4", CourseLanguage.TR)), List.of(yalova("4", CourseLanguage.TR))), ROWS);
+        assertThat(noGrade.problems()).anyMatch(p -> p.contains("not girilmedi"));
+
+        // Komisyon dil uyarılı satırı (4) bilerek saydı: krediye girer. Eksik bilgili satır (5) girmez,
+        // sayılmayan satır (3) girmez.
         MatchCalculator.Evaluation evaluation = MatchCalculator.evaluate(List.of(
                 new MatchCalculator.MatchIn(true, List.of(incoming("92", "4", CourseLanguage.TR)),
                         List.of(yalova("4", CourseLanguage.EN))),
                 new MatchCalculator.MatchIn(true, List.of(incoming("92", "4", CourseLanguage.EN)),
                         List.of(yalova("6", CourseLanguage.EN))),
                 new MatchCalculator.MatchIn(false, List.of(incoming("92", "4", CourseLanguage.TR)),
-                        List.of(yalova("3", CourseLanguage.TR)))), ROWS, TransferType.YATAY);
-        assertThat(evaluation.placement().countedCredit()).isEqualByComparingTo("6");
+                        List.of(yalova("3", CourseLanguage.TR))),
+                new MatchCalculator.MatchIn(true, List.of(incoming("XY", "4", CourseLanguage.TR)),
+                        List.of(yalova("5", CourseLanguage.TR)))), ROWS, TransferType.YATAY);
+        assertThat(evaluation.placement().countedCredit()).isEqualByComparingTo("10");
     }
 
     @Test

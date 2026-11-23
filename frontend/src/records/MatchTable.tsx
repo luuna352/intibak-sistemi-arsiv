@@ -67,7 +67,7 @@ export default function MatchTable({ matches, onChange, results, planCourses, di
                   <Checkbox
                     checked={m.counted}
                     disabled={disabled}
-                    onChange={(e) => update(m.key, { counted: e.target.checked })}
+                    onChange={(e) => update(m.key, { counted: e.target.checked, countedTouched: true })}
                   />
                 }
               />
@@ -141,8 +141,15 @@ export default function MatchTable({ matches, onChange, results, planCourses, di
 
             {r && r.problems.length > 0 && (
               <Alert severity={m.counted ? 'error' : 'warning'} sx={{ mt: 1 }}>
-                {m.counted ? 'Bu satır bu haliyle sayılamaz: ' : ''}
+                {m.counted ? 'Bu satır bu haliyle sayılamaz (eksik bilgi): ' : ''}
                 {r.problems.join(' ')}
+              </Alert>
+            )}
+            {/* Kural uyarısı engel değil: sistem "sayılmaz" önerir, komisyon isterse kutuyu işaretleyip sayar. */}
+            {r && r.warnings.length > 0 && (
+              <Alert severity={m.counted ? 'info' : 'warning'} sx={{ mt: 1 }}>
+                Kurala göre sayılmaz önerisi: {r.warnings.join(' ')}
+                {m.counted ? ' Komisyon kararıyla sayılıyor.' : ' Komisyon yine de saymak isterse "Sayıldı mı?" kutusunu işaretleyebilir.'}
               </Alert>
             )}
           </Paper>
