@@ -44,7 +44,7 @@ class ActiveYearServiceTest {
 
         assertThat(year.label()).isEqualTo("2026-2027");
         assertThat(year.classPlans()).extracting(ActiveYearService.ClassPlan::planYear)
-                .containsExactly("2026-2027", "2025-2026", "2024-2025");
+                .containsExactly("2026-2027", "2025-2026", "2024-2025", "2023-2024");
     }
 
     @Test

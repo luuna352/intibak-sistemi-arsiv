@@ -21,8 +21,9 @@ public class ActiveYearService {
     static final String KEY = "active_start_year";
     static final int MIN_YEAR = 2000;
     static final int MAX_YEAR = 2100;
-    // Yerleştirme en fazla 3. sınıfa yapılır (kredi > 60 ya da DGS), bu yüzden eşleme 1-3. sınıf için gösterilir.
-    static final int MAX_PLACEMENT_CLASS = 3;
+    // Sistem en fazla 3. sınıfa yerleştirir (kredi > 60 ya da DGS), ama komisyon yerleşimi 4. sınıf dahil
+    // değiştirebilir (kural 8); bu yüzden plan eşlemesi 1-4. sınıf için gösterilir.
+    static final int MAX_PLACEMENT_CLASS = 4;
 
     private final SettingRepository repository;
     // Saat dışarıdan verilir: testlerde sabit bir an kullanılabilsin.

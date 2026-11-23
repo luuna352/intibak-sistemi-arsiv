@@ -194,7 +194,7 @@ export default function PlansPage() {
       .catch((e: Error) => setMessage({ type: 'error', text: e.message }))
   }, [selectedId])
 
-  // Aktif yıla göre 1-3. sınıfın kullanacağı plan; plan listesi değişince (yükleme sonrası) yeniden sorulur.
+  // Aktif yıla göre 1-4. sınıfın kullanacağı plan; plan listesi değişince (yükleme sonrası) yeniden sorulur.
   useEffect(() => {
     if (!activeYear) return
     Promise.all(
