@@ -36,6 +36,8 @@ public class RecordService {
     // Bir dersin en fazla konu sayısı ve bir konunun en fazla uzunluğu (V10'daki VARCHAR(500)).
     private static final int MAX_TOPICS = 100;
     private static final int MAX_TOPIC_LENGTH = 500;
+    // Öğrencinin ders listesinde en fazla bu kadar ders (4 yıllık bir transkript 60-80 ders olur).
+    private static final int MAX_SOURCE_COURSES = 200;
 
     private final IntibakRecordRepository repository;
     private final GradeTableRepository gradeTables;
@@ -64,10 +66,16 @@ public class RecordService {
 
     /**
      * Eşleştirmedeki bir ders. convertedGrade: karşı kurum notunun Yalova karşılığı (Yalova dersinde boş). topics:
-     * dersin içeriği, konu konu.
+     * dersin içeriği, konu konu. source: karşı dersin öğrencinin ders listesindeki sırası (listeden seçilmediyse ya
+     * da Yalova dersinde boş); semester: karşı dersin yarıyılı.
      */
     public record CourseView(String code, String name, BigDecimal credit, BigDecimal ects, CourseLanguage language,
-            String grade, YalovaGrade convertedGrade, List<TopicView> topics) {
+            String grade, YalovaGrade convertedGrade, List<TopicView> topics, Integer source, String semester) {
+    }
+
+    /** Öğrencinin transkriptindeki bir ders (V14; eşleşmeyenler de listede durur). */
+    public record SourceCourseView(String code, String name, String semester, BigDecimal credit, BigDecimal ects,
+            CourseLanguage language, String grade) {
     }
 
     /**
@@ -90,15 +98,30 @@ public class RecordService {
             DepartmentLanguage departmentLanguage, RecordStatus status,
             String statusLabel, String createdByName, Instant createdAt, String updatedByName, Instant updatedAt,
             Long gradeTableId, Long planId, Evaluation evaluation, Integer placementClassLevel,
-            Integer placementSemester) {
+            Integer placementSemester, List<SourceCourseView> sourceCourses) {
     }
 
     public record TopicInput(String text, Boolean covered) {
     }
 
-    /** Formdan gelen ders. grade sadece karşı kurum dersinde dolu olur; topics: dersin içeriği, konu konu. */
+    /**
+     * Formdan gelen ders. grade sadece karşı kurum dersinde dolu olur; topics: dersin içeriği, konu konu.
+     * source: karşı ders öğrencinin ders listesinden seçildiyse listedeki sırası; o zaman kod, ad, yarıyıl, kredi,
+     * AKTS, dil ve not listeden alınır (bu alanlarda gelen değerler kullanılmaz).
+     */
     public record CourseInput(String code, String name, BigDecimal credit, BigDecimal ects, CourseLanguage language,
-            String grade, List<TopicInput> topics) {
+            String grade, List<TopicInput> topics, String semester, Integer source) {
+
+        /** Listeye bağlı olmayan ders (yarıyılsız; testlerde ve Yalova derslerinde kısa yol). */
+        public CourseInput(String code, String name, BigDecimal credit, BigDecimal ects, CourseLanguage language,
+                String grade, List<TopicInput> topics) {
+            this(code, name, credit, ects, language, grade, topics, null, null);
+        }
+    }
+
+    /** Öğrencinin ders listesindeki bir ders (formdaki iki sütunlu ekranın sol tarafı). */
+    public record SourceCourseInput(String code, String name, String semester, BigDecimal credit, BigDecimal ects,
+            CourseLanguage language, String grade) {
     }
 
     public record MatchInput(Boolean counted, List<CourseInput> incoming, List<CourseInput> yalova) {
@@ -107,11 +130,23 @@ public class RecordService {
     /**
      * Formun tamamı: öğrenci bilgileri, PT, plan, eşleştirme satırları ve "Kontrol ettim / Onaylıyorum" kutusu.
      * Kutu işaretli değilse (confirmed != true) kayıt yapılmaz. placementClassLevel/placementSemester: komisyonun
-     * sınıf/dönem kararı; ikisi de boşsa sistemin önerisi geçerlidir.
+     * sınıf/dönem kararı; ikisi de boşsa sistemin önerisi geçerlidir. sourceCourses: öğrencinin ders listesi.
      */
     public record Input(String tcNo, String fullName, TransferType transferType, String university,
             String facultyDepartment, LocalDate registrationDate, PrepStatus prepStatus,
-            DepartmentLanguage departmentLanguage, Long gradeTableId, Long planId, List<MatchInput> matches, Integer placementClassLevel, Integer placementSemester, Boolean confirmed) {
+            DepartmentLanguage departmentLanguage, Long gradeTableId, Long planId, List<MatchInput> matches,
+            Integer placementClassLevel, Integer placementSemester, Boolean confirmed,
+            List<SourceCourseInput> sourceCourses) {
+
+        /** Ders listesi olmadan (eski biçim; testlerde kısa yol). */
+        public Input(String tcNo, String fullName, TransferType transferType, String university,
+                String facultyDepartment, LocalDate registrationDate, PrepStatus prepStatus,
+                DepartmentLanguage departmentLanguage, Long gradeTableId, Long planId, List<MatchInput> matches,
+                Integer placementClassLevel, Integer placementSemester, Boolean confirmed) {
+            this(tcNo, fullName, transferType, university, facultyDepartment, registrationDate, prepStatus,
+                    departmentLanguage, gradeTableId, planId, matches, placementClassLevel, placementSemester,
+                    confirmed, null);
+        }
     }
 
     /** Açılır liste seçeneği: {"value": "YATAY", "label": "Yatay geçiş"}. */
@@ -170,8 +205,10 @@ public class RecordService {
     @Transactional(readOnly = true)
     public Evaluation evaluate(Input input) {
         List<MatchInput> matches = input == null || input.matches() == null ? List.of() : input.matches();
-        List<MatchCalculator.MatchIn> ins = matches.stream().map(RecordService::lenient).toList();
-        return evaluation(ins, rowsOf(input == null ? null : input.gradeTableId()),
+        List<SourceCourseInput> sources = sourcesOf(input);
+        List<Lenient> lenient = matches.stream().map(m -> lenient(m, sources)).toList();
+        return evaluation(lenient.stream().map(Lenient::in).toList(), lenient.stream().map(Lenient::links).toList(),
+                rowsOf(input == null ? null : input.gradeTableId()),
                 input == null ? null : input.transferType(), prepOf(input), departmentOf(input));
     }
 
@@ -179,6 +216,7 @@ public class RecordService {
     public Detail create(Input input, String actorName) {
         Prepared prepared = prepare(input);
         IntibakRecord record = new IntibakRecord(prepared.info(), actorName, Instant.now(clock));
+        record.replaceSourceCourses(prepared.sources());
         record.replaceMatches(input.gradeTableId(), input.planId(), prepared.matches());
         record.decidePlacement(input.placementClassLevel(), input.placementSemester());
         return toDetail(repository.save(record));
@@ -192,6 +230,7 @@ public class RecordService {
         }
         Prepared prepared = prepare(input);
         record.update(prepared.info(), actorName, Instant.now(clock));
+        record.replaceSourceCourses(prepared.sources());
         record.replaceMatches(input.gradeTableId(), input.planId(), prepared.matches());
         record.decidePlacement(input.placementClassLevel(), input.placementSemester());
         return toDetail(record);
@@ -233,7 +272,16 @@ public class RecordService {
 
     // ---- Kurallar ----
 
-    private record Prepared(IntibakRecord.StudentInfo info, List<IntibakMatch> matches) {
+    private record Prepared(IntibakRecord.StudentInfo info, List<IntibakMatch> matches,
+            List<IntibakSourceCourse> sources) {
+    }
+
+    // Karşı dersin listeye bağlantısı (ekranda hangi satırdan geldiği ve yarıyılı); hesaba girmez, sadece gösterilir.
+    private record Link(Integer source, String semester) {
+    }
+
+    // Önizlemede bir satır: hesaba giren hali ve karşı derslerin bağlantıları (aynı sırayla).
+    private record Lenient(MatchCalculator.MatchIn in, List<Link> links) {
     }
 
     /**
@@ -253,6 +301,17 @@ public class RecordService {
         }
         checkPlacement(in.placementClassLevel(), in.placementSemester());
 
+        // Öğrencinin ders listesi: her satırın adı zorunlu, sayılar ve metin uzunlukları kontrol edilir.
+        List<SourceCourseInput> sources = sourcesOf(in);
+        if (sources.size() > MAX_SOURCE_COURSES) {
+            throw new BadRequestException("Öğrencinin ders listesine en fazla " + MAX_SOURCE_COURSES
+                    + " ders girilebilir.");
+        }
+        List<IntibakSourceCourse> sourceEntities = new ArrayList<>();
+        for (int i = 0; i < sources.size(); i++) {
+            sourceEntities.add(sourceCourse(i, sources.get(i)));
+        }
+
         List<MatchInput> inputs = in.matches() == null ? List.of() : in.matches();
         List<MatchCalculator.MatchIn> ins = new ArrayList<>();
         List<IntibakMatch> matches = new ArrayList<>();
@@ -263,7 +322,7 @@ public class RecordService {
             List<CourseInput> yalova = m.yalova() == null ? List.of() : m.yalova();
             List<IntibakMatchCourse> courses = new ArrayList<>();
             for (CourseInput c : incoming) {
-                courses.add(course(courses.size(), MatchSide.INCOMING, c, prefix));
+                courses.add(course(courses.size(), MatchSide.INCOMING, resolveStrict(c, sources, prefix), prefix));
             }
             for (CourseInput c : yalova) {
                 courses.add(course(courses.size(), MatchSide.YALOVA, c, prefix));
@@ -285,7 +344,51 @@ public class RecordService {
                         + String.join(" ", result.problems()));
             }
         }
-        return new Prepared(info, matches);
+        return new Prepared(info, matches, sourceEntities);
+    }
+
+    private static List<SourceCourseInput> sourcesOf(Input in) {
+        return in == null || in.sourceCourses() == null ? List.of() : in.sourceCourses();
+    }
+
+    /** Öğrencinin ders listesindeki bir satır: ad zorunlu, sayılar 0-999.9, dil boşsa TR. */
+    private static IntibakSourceCourse sourceCourse(int position, SourceCourseInput s) {
+        String prefix = "Öğrencinin ders listesi " + (position + 1) + ". satır: ";
+        String name = s == null ? null : text(s.name(), 200, prefix + "ders adı");
+        if (name == null) {
+            throw new BadRequestException(prefix + "ders adı girilmeli.");
+        }
+        checkNumber(s.credit(), prefix + name + " kredisi");
+        checkNumber(s.ects(), prefix + name + " AKTS'si");
+        return new IntibakSourceCourse(position, text(s.code(), 20, prefix + "ders kodu"), name,
+                text(s.semester(), 20, prefix + name + " yarıyılı"), s.credit(), s.ects(),
+                s.language() == null ? CourseLanguage.TR : s.language(), text(s.grade(), 10, prefix + name + " notu"));
+    }
+
+    /**
+     * Karşı ders listeden seçildiyse (source dolu) bilgileri listedeki dersten alınır: ekranda listede düzeltilen
+     * not ya da kredi eşleştirmeye de yansır. İçerik (topics) eşleştirmenin kendisinden gelir. Sıra numarası listede
+     * yoksa null döner.
+     */
+    private static CourseInput resolve(CourseInput c, List<SourceCourseInput> sources) {
+        if (c == null || c.source() == null) {
+            return c;
+        }
+        if (c.source() < 0 || c.source() >= sources.size() || sources.get(c.source()) == null) {
+            return null;
+        }
+        SourceCourseInput s = sources.get(c.source());
+        return new CourseInput(s.code(), s.name(), s.credit(), s.ects(), s.language(), s.grade(), c.topics(),
+                s.semester(), c.source());
+    }
+
+    // Kaydederken listede olmayan bir derse bağlanmış karşı ders hata verir (önizlemede ise sessizce atlanır).
+    private static CourseInput resolveStrict(CourseInput c, List<SourceCourseInput> sources, String prefix) {
+        CourseInput resolved = resolve(c, sources);
+        if (resolved == null) {
+            throw new BadRequestException(prefix + "karşı ders öğrencinin ders listesinde bulunamadı.");
+        }
+        return resolved;
     }
 
     /** TC (resmi algoritmayla), ad-soyad ve geçiş türü zorunlu; metinler kırpılır, boş metin = değer yok. */
@@ -331,6 +434,9 @@ public class RecordService {
         String grade = side == MatchSide.INCOMING ? text(c.grade(), 10, prefix + name + " notu") : null;
         IntibakMatchCourse course = new IntibakMatchCourse(position, side, text(c.code(), 20, prefix + "ders kodu"),
                 name, c.credit(), c.ects(), c.language() == null ? CourseLanguage.TR : c.language(), grade);
+        if (side == MatchSide.INCOMING) {
+            course.linkToSource(c.source(), text(c.semester(), 20, prefix + name + " yarıyılı"));
+        }
         List<MatchCalculator.Topic> topics = topics(c, side);
         if (topics.size() > MAX_TOPICS) {
             throw new BadRequestException(prefix + name + ": en fazla " + MAX_TOPICS + " konu girilebilir.");
@@ -382,15 +488,23 @@ public class RecordService {
         }
     }
 
-    // Önizlemede yarım satırlar hata vermez: adı boş dersler yok sayılır.
-    private static MatchCalculator.MatchIn lenient(MatchInput m) {
-        return new MatchCalculator.MatchIn(Boolean.TRUE.equals(m.counted()), named(m.incoming(), MatchSide.INCOMING),
-                named(m.yalova(), MatchSide.YALOVA));
+    // Önizlemede yarım satırlar hata vermez: adı boş dersler ve listede bulunamayan karşı dersler yok sayılır.
+    private static Lenient lenient(MatchInput m, List<SourceCourseInput> sources) {
+        List<CourseInput> incoming = named((m.incoming() == null ? List.<CourseInput>of() : m.incoming()).stream()
+                .map(c -> resolve(c, sources)).toList());
+        return new Lenient(new MatchCalculator.MatchIn(Boolean.TRUE.equals(m.counted()),
+                toCalcInputs(incoming, MatchSide.INCOMING), toCalcInputs(named(m.yalova()), MatchSide.YALOVA)),
+                incoming.stream().map(c -> new Link(c.source(), c.semester())).toList());
     }
 
-    private static List<MatchCalculator.CourseIn> named(List<CourseInput> courses, MatchSide side) {
+    private static List<CourseInput> named(List<CourseInput> courses) {
         return (courses == null ? List.<CourseInput>of() : courses).stream()
-                .filter(c -> c.name() != null && !c.name().isBlank())
+                .filter(c -> c != null && c.name() != null && !c.name().isBlank())
+                .toList();
+    }
+
+    private static List<MatchCalculator.CourseIn> toCalcInputs(List<CourseInput> courses, MatchSide side) {
+        return courses.stream()
                 .map(c -> new MatchCalculator.CourseIn(c.code(), c.name().trim(), c.credit(), c.ects(),
                         c.language() == null ? CourseLanguage.TR : c.language(), c.grade(), topics(c, side)))
                 .toList();
@@ -410,8 +524,9 @@ public class RecordService {
     }
 
     // Hesap sonucunu ekrana gidecek biçime çevirir (her karşı dersin yanına Yalova karşılığı eklenir).
-    private static Evaluation evaluation(List<MatchCalculator.MatchIn> ins, List<GradeTableRow> rows,
-            TransferType transferType, PrepStatus prep, DepartmentLanguage department) {
+    // links: her satırın karşı derslerinin listeye bağlantısı (ins ile aynı sırada).
+    private static Evaluation evaluation(List<MatchCalculator.MatchIn> ins, List<List<Link>> links,
+            List<GradeTableRow> rows, TransferType transferType, PrepStatus prep, DepartmentLanguage department) {
         MatchCalculator.Evaluation result = MatchCalculator.evaluate(ins, rows, transferType, prep, department);
         List<MatchView> views = new ArrayList<>();
         for (int i = 0; i < ins.size(); i++) {
@@ -419,9 +534,9 @@ public class RecordService {
             MatchCalculator.MatchResult r = result.matches().get(i);
             List<CourseView> incoming = new ArrayList<>();
             for (int j = 0; j < in.incoming().size(); j++) {
-                incoming.add(view(in.incoming().get(j), r.incomingGrades().get(j)));
+                incoming.add(view(in.incoming().get(j), r.incomingGrades().get(j), links.get(i).get(j)));
             }
-            List<CourseView> yalova = in.yalova().stream().map(c -> view(c, null)).toList();
+            List<CourseView> yalova = in.yalova().stream().map(c -> view(c, null, new Link(null, null))).toList();
             views.add(new MatchView(in.counted(), incoming, yalova, r.grade(), r.yalovaCredit(), r.problems(),
                     r.warnings(), r.suggestCounted(), r.basis(), r.basis() == null ? null : r.basis().label(),
                     r.contentPercent()));
@@ -429,9 +544,10 @@ public class RecordService {
         return new Evaluation(views, result.placement());
     }
 
-    private static CourseView view(MatchCalculator.CourseIn c, YalovaGrade converted) {
+    private static CourseView view(MatchCalculator.CourseIn c, YalovaGrade converted, Link link) {
         return new CourseView(c.code(), c.name(), c.credit(), c.ects(), c.language(), c.grade(), converted,
-                c.topics().stream().map(t -> new TopicView(t.text(), t.covered())).toList());
+                c.topics().stream().map(t -> new TopicView(t.text(), t.covered())).toList(), link.source(),
+                link.semester());
     }
 
     private static String text(String value, int max, String field) {
@@ -460,13 +576,21 @@ public class RecordService {
                 .map(m -> new MatchCalculator.MatchIn(m.isCounted(), toCalc(m.getCourses(), MatchSide.INCOMING),
                         toCalc(m.getCourses(), MatchSide.YALOVA)))
                 .toList();
-        Evaluation evaluation = evaluation(ins, rowsOf(r.getGradeTableId()), r.getTransferType(), r.getPrepStatus(),
-                r.getDepartmentLanguage());
+        List<List<Link>> links = r.getMatches().stream()
+                .map(m -> m.coursesOn(MatchSide.INCOMING).stream()
+                        .map(c -> new Link(c.getSourcePosition(), c.getSemester())).toList())
+                .toList();
+        Evaluation evaluation = evaluation(ins, links, rowsOf(r.getGradeTableId()), r.getTransferType(),
+                r.getPrepStatus(), r.getDepartmentLanguage());
+        List<SourceCourseView> sources = r.getSourceCourses().stream()
+                .map(s -> new SourceCourseView(s.getCode(), s.getName(), s.getSemester(), s.getCredit(), s.getEcts(),
+                        s.getLanguage(), s.getGrade()))
+                .toList();
         return new Detail(r.getId(), r.getTcNo(), r.getFullName(), r.getTransferType(), r.getTransferType().label(),
                 r.getUniversity(), r.getFacultyDepartment(), r.getRegistrationDate(), r.getPrepStatus(),
                 r.getDepartmentLanguage(), r.getStatus(),
                 r.getStatus().label(), r.getCreatedByName(), r.getCreatedAt(), r.getUpdatedByName(),
                 r.getUpdatedAt(), r.getGradeTableId(), r.getPlanId(), evaluation, r.getPlacementClassLevel(),
-                r.getPlacementSemester());
+                r.getPlacementSemester(), sources);
     }
 }

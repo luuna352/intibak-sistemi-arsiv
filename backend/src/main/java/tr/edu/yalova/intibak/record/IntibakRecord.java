@@ -78,6 +78,11 @@ public class IntibakRecord {
     @OrderBy("position")
     private List<IntibakMatch> matches = new ArrayList<>();
 
+    // V14: öğrencinin transkriptindeki bütün dersler (eşleşmeyenler dahil); kayıtla birlikte kaydedilir.
+    @OneToMany(mappedBy = "record", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("position")
+    private List<IntibakSourceCourse> sourceCourses = new ArrayList<>();
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private RecordStatus status;
@@ -158,6 +163,22 @@ public class IntibakRecord {
             match.attachTo(this);
             matches.add(match);
         }
+    }
+
+    /**
+     * Öğrencinin ders listesini ekrandaki haliyle değiştirir: eski satırlar silinir, yenileri eklenir. Eşleştirmedeki
+     * karşı dersler listeye sıra numarasıyla (position) bağlı olduğu için ikisi aynı kayıtta birlikte değişir.
+     */
+    public void replaceSourceCourses(List<IntibakSourceCourse> newCourses) {
+        sourceCourses.clear();
+        for (IntibakSourceCourse course : newCourses) {
+            course.attachTo(this);
+            sourceCourses.add(course);
+        }
+    }
+
+    public List<IntibakSourceCourse> getSourceCourses() {
+        return sourceCourses;
     }
 
     /** Komisyonun sınıf/dönem kararı; ikisi de null = sistemin önerisi kullanılır (kontrol RecordService'te). */

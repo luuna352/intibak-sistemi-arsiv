@@ -206,6 +206,54 @@ class RecordServiceTest {
     }
 
     @Test
+    void incomingCourseIsTakenFromTheStudentsCourseList() {
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        // Öğrencinin listesi: 2 ders, ikincisi eşleşmiyor ama listede kalıyor.
+        List<RecordService.SourceCourseInput> sources = List.of(
+                new RecordService.SourceCourseInput(" FIZ101 ", "Fizik I", "1", new BigDecimal("4"), new BigDecimal("6"),
+                        CourseLanguage.TR, "BB"),
+                new RecordService.SourceCourseInput(null, "Seramik Sanatı", "2", null, null, null, "AA"));
+        // Eşleştirmedeki karşı dersin kendi alanları boş/yanlış olsa da listedeki 0. dersten alınır; içerik satırdan.
+        // (PT seçilmediği için satır "sayılmadı" işaretli; yoksa eksik bilgi yüzünden kaydedilmez.)
+        RecordService.MatchInput match = new RecordService.MatchInput(false,
+                List.of(new RecordService.CourseInput(null, "yanlış ad", null, null, null, "FF",
+                        List.of(new RecordService.TopicInput("Kinematik", null)), null, 0)),
+                List.of(new RecordService.CourseInput("BSM103", "Fizik I", new BigDecimal("4"), null, CourseLanguage.TR,
+                        null, null)));
+        RecordService.Input input = new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY, null, null, null,
+                null, null, null, null, List.of(match), null, null, true, sources);
+
+        RecordService.Detail saved = service.create(input, "x");
+
+        assertThat(saved.sourceCourses()).hasSize(2);
+        assertThat(saved.sourceCourses().get(0).code()).isEqualTo("FIZ101");
+        assertThat(saved.sourceCourses().get(1).language()).isEqualTo(CourseLanguage.TR);
+        RecordService.CourseView incoming = saved.evaluation().matches().get(0).incoming().get(0);
+        assertThat(incoming.name()).isEqualTo("Fizik I");
+        assertThat(incoming.grade()).isEqualTo("BB");
+        assertThat(incoming.semester()).isEqualTo("1");
+        assertThat(incoming.source()).isEqualTo(0);
+        assertThat(incoming.topics()).extracting(RecordService.TopicView::text).containsExactly("Kinematik");
+        // Ad aynı (kural 4) ve listedeki not BB: satır sorunsuz.
+        assertThat(saved.evaluation().matches().get(0).basis()).isEqualTo(MatchBasis.SAME_NAME);
+
+        // Önizleme de listeden okur; listede olmayan sıra numarası önizlemede atlanır, kaydetmede hata verir.
+        RecordService.MatchInput broken = new RecordService.MatchInput(true,
+                List.of(new RecordService.CourseInput(null, null, null, null, null, null, null, null, 5)),
+                match.yalova());
+        RecordService.Input brokenInput = new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY, null, null,
+                null, null, null, null, null, List.of(broken), null, null, true, sources);
+        assertThat(service.evaluate(brokenInput).matches().get(0).incoming()).isEmpty();
+        assertThatThrownBy(() -> service.create(brokenInput, "x")).hasMessageContaining("ders listesinde bulunamadı");
+
+        // Listede adı boş ders kaydedilmez.
+        RecordService.Input noName = new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY, null, null, null,
+                null, null, null, null, List.of(), null, null, true,
+                List.of(new RecordService.SourceCourseInput(null, " ", null, null, null, null, null)));
+        assertThatThrownBy(() -> service.create(noName, "x")).hasMessageContaining("1. satır: ders adı girilmeli");
+    }
+
+    @Test
     void commissionCanOverrideSuggestedPlacement() {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         RecordService.Input decided = new RecordService.Input(VALID_TC, "Ayşe", TransferType.YATAY, null, null, null,

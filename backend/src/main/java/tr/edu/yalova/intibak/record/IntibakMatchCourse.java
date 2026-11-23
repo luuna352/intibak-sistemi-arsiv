@@ -60,6 +60,13 @@ public class IntibakMatchCourse {
     @Column(length = 10)
     private String grade;
 
+    // V14: karşı ders öğrencinin ders listesindeki hangi dersten geldi (sıra numarası) ve o dersin yarıyılı.
+    @Column(name = "source_position")
+    private Integer sourcePosition;
+
+    @Column(length = 20)
+    private String semester;
+
     // Kural 5: dersin içeriği, konu konu (V10). Dersle birlikte kaydedilir, listeden çıkan konu silinir.
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position")
@@ -82,6 +89,20 @@ public class IntibakMatchCourse {
 
     void attachTo(IntibakMatch match) {
         this.match = match;
+    }
+
+    /** Karşı dersin öğrencinin ders listesindeki yeri ve yarıyılı (listeden seçilmediyse ikisi de null). */
+    void linkToSource(Integer sourcePosition, String semester) {
+        this.sourcePosition = sourcePosition;
+        this.semester = semester;
+    }
+
+    public Integer getSourcePosition() {
+        return sourcePosition;
+    }
+
+    public String getSemester() {
+        return semester;
     }
 
     /** Konuları ekrandaki haliyle değiştirir. */
