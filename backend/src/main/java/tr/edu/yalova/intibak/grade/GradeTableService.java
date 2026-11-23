@@ -39,15 +39,15 @@ public class GradeTableService {
 
     // ---- Ekrana giden ve ekrandan gelen veriler ----
 
-    public record Summary(Long id, String code, String name, int rowCount) {
+    public record Summary(Long id, String code, String name, GradeSystem system, int rowCount) {
     }
 
     public record Row(String sourceLetter, BigDecimal sourceMin, BigDecimal sourceMax, YalovaGrade targetLetter,
             BigDecimal targetPoints) {
     }
 
-    public record Detail(Long id, String code, String name, String description, String createdByName,
-            Instant createdAt, String updatedByName, Instant updatedAt, List<Row> rows) {
+    public record Detail(Long id, String code, String name, GradeSystem system, String description,
+            String createdByName, Instant createdAt, String updatedByName, Instant updatedAt, List<Row> rows) {
     }
 
     /** Ekrandan gelen satır. Yalova puanı gelmez; harften hesaplanır. */
@@ -59,7 +59,7 @@ public class GradeTableService {
     @Transactional(readOnly = true)
     public List<Summary> list() {
         return repository.findAllByOrderByIdAsc().stream()
-                .map(t -> new Summary(t.getId(), t.getCode(), t.getName(), t.getRows().size()))
+                .map(t -> new Summary(t.getId(), t.getCode(), t.getName(), t.getSystem(), t.getRows().size()))
                 .toList();
     }
 
@@ -68,16 +68,22 @@ public class GradeTableService {
         return toDetail(find(id));
     }
 
-    /** "Yeni Puan Tablosu Ekle": sıradaki kodla (en büyük PT numarası + 1) boş bir tablo açar. */
+    /**
+     * "Yeni Puan Tablosu Ekle": sıradaki kodla (en büyük PT numarası + 1) boş bir tablo açar. Not sistemi (100'lük,
+     * harf ve sayı, sadece harf) seçilmelidir; tablonun sütunları buna göre belirlenir.
+     */
     @Transactional
-    public Detail create(String name, String actorName) {
+    public Detail create(String name, GradeSystem system, String actorName) {
         String trimmed = requireName(name);
+        if (system == null) {
+            throw new BadRequestException("Not sistemi seçilmeli (100'lük puan, harf ve sayı ya da sadece harf).");
+        }
         int next = repository.findAll().stream()
                 .map(t -> CODE.matcher(t.getCode()))
                 .filter(Matcher::matches)
                 .mapToInt(m -> Integer.parseInt(m.group(1)))
                 .max().orElse(0) + 1;
-        GradeTable table = new GradeTable("PT" + next, trimmed, actorName, Instant.now(clock));
+        GradeTable table = new GradeTable("PT" + next, trimmed, system, actorName, Instant.now(clock));
         return toDetail(repository.save(table));
     }
 
@@ -85,7 +91,7 @@ public class GradeTableService {
     @Transactional
     public Detail update(long id, String name, List<RowInput> inputs, String actorName) {
         GradeTable table = find(id);
-        List<GradeTableRow> rows = validate(inputs);
+        List<GradeTableRow> rows = validate(table.getSystem(), inputs);
         table.replace(requireName(name), rows, actorName, Instant.now(clock));
         return toDetail(table);
     }
@@ -97,8 +103,12 @@ public class GradeTableService {
      * - Yalova harf notu seçilmeli.
      * - Karşı harf notu ya da puan aralığı (alt ve üst birlikte) olmalı; aralık 0-100 içinde ve alt <= üst.
      * - Aynı karşı harf notu iki kez yazılamaz; puan aralıkları üst üste binemez (bir puan iki farklı nota çevrilemez).
+     * - Tablonun türüne göre (EK-1'deki sütunlar):
+     *   100'lük puan: satır ya aralık (90-100) ya da özel not (DEVAMSIZ), ikisi birden değil;
+     *   harf ve sayı: harf notu şart, sayı isteğe bağlı ve tek sayıdır (alt = üst, örn. 3.70);
+     *   sadece harf: harf notu şart, sayı girilmez.
      */
-    static List<GradeTableRow> validate(List<RowInput> inputs) {
+    static List<GradeTableRow> validate(GradeSystem system, List<RowInput> inputs) {
         if (inputs == null || inputs.isEmpty()) {
             throw new BadRequestException("Tabloda en az bir satır olmalı.");
         }
@@ -123,6 +133,7 @@ public class GradeTableService {
             if (min != null && (min.compareTo(MIN_SCORE) < 0 || max.compareTo(MAX_SCORE) > 0 || min.compareTo(max) > 0)) {
                 throw new BadRequestException(prefix + "puan aralığı 0-100 arasında ve alt sınır üst sınırdan küçük olmalı.");
             }
+            checkSystem(system, prefix, letter, min, max);
             if (letter != null && letter.length() > 10) {
                 throw new BadRequestException(prefix + "harf notu en fazla 10 karakter olabilir.");
             }
@@ -134,6 +145,35 @@ public class GradeTableService {
         }
         checkOverlaps(rows);
         return rows;
+    }
+
+    // Tablonun türüne göre satırda hangi sütunların dolu olabileceği (EK-1'deki tablolar gibi).
+    private static void checkSystem(GradeSystem system, String prefix, String letter, BigDecimal min, BigDecimal max) {
+        switch (system) {
+            case SCORE -> {
+                if (letter != null && min != null) {
+                    throw new BadRequestException(prefix + "100'lü not ya puan aralığı (örn. 90-100) ya da özel not"
+                            + " (örn. DEVAMSIZ) olmalı, ikisi birden olamaz.");
+                }
+            }
+            case LETTER_NUMBER -> {
+                if (letter == null) {
+                    throw new BadRequestException(prefix + "karşı üniversitenin harf notu girilmeli.");
+                }
+                if (min != null && min.compareTo(max) != 0) {
+                    throw new BadRequestException(prefix + "harf notunun sayı karşılığı tek bir sayı olmalı"
+                            + " (örn. 3.70).");
+                }
+            }
+            case LETTER -> {
+                if (letter == null) {
+                    throw new BadRequestException(prefix + "karşı üniversitenin harf notu girilmeli.");
+                }
+                if (min != null) {
+                    throw new BadRequestException(prefix + "bu tabloda sadece harf notu olur, sayı girilmez.");
+                }
+            }
+        }
     }
 
     // Aralıklar alt sınıra göre sıralanır; bir aralığın üstü sonrakinin altına eşit ya da büyükse çakışma vardır
@@ -178,7 +218,7 @@ public class GradeTableService {
                 .map(r -> new Row(r.getSourceLetter(), r.getSourceMin(), r.getSourceMax(), r.getTargetLetter(),
                         r.getTargetLetter().points()))
                 .toList();
-        return new Detail(t.getId(), t.getCode(), t.getName(), t.getDescription(), t.getCreatedByName(),
-                t.getCreatedAt(), t.getUpdatedByName(), t.getUpdatedAt(), rows);
+        return new Detail(t.getId(), t.getCode(), t.getName(), t.getSystem(), t.getDescription(),
+                t.getCreatedByName(), t.getCreatedAt(), t.getUpdatedByName(), t.getUpdatedAt(), rows);
     }
 }

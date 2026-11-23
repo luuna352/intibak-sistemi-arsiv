@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import tr.edu.yalova.intibak.common.BadRequestException;
 import tr.edu.yalova.intibak.curriculum.CourseLanguage;
 import tr.edu.yalova.intibak.curriculum.CurriculumPlanRepository;
+import tr.edu.yalova.intibak.grade.GradeSystem;
 import tr.edu.yalova.intibak.grade.GradeTable;
 import tr.edu.yalova.intibak.grade.GradeTableRepository;
 import tr.edu.yalova.intibak.grade.GradeTableRow;
@@ -141,7 +142,7 @@ class RecordServiceTest {
 
     @Test
     void savesMatchesAndComputesPlacement() {
-        GradeTable pt = new GradeTable("PT1", "100'lük", "x", NOW);
+        GradeTable pt = new GradeTable("PT1", "100'lük", GradeSystem.SCORE, "x", NOW);
         pt.replace("100'lük", List.of(new GradeTableRow(0, null, new BigDecimal("90"), new BigDecimal("100"),
                 YalovaGrade.AA)), "x", NOW);
         when(gradeTables.existsById(1L)).thenReturn(true);

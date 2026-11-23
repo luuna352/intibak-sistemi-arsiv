@@ -30,7 +30,8 @@ public class GradeTableController {
         this.userService = userService;
     }
 
-    public record CreateRequest(String name) {
+    /** Yeni tablo: adı ve karşı üniversitenin not sistemi (SCORE, LETTER_NUMBER, LETTER). */
+    public record CreateRequest(String name, GradeSystem system) {
     }
 
     public record UpdateRequest(String name, List<GradeTableService.RowInput> rows) {
@@ -60,7 +61,7 @@ public class GradeTableController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public GradeTableService.Detail create(@RequestBody CreateRequest body, Authentication authentication) {
-        return service.create(body.name(), userService.displayNameOf(authentication));
+        return service.create(body.name(), body.system(), userService.displayNameOf(authentication));
     }
 
     @PutMapping("/{id}")

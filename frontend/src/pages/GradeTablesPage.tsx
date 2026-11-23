@@ -12,49 +12,44 @@ import Paper from '@mui/material/Paper'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
-import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import { api } from '../api/client'
+import GradeTableHead from '../grades/GradeTableHead'
+import {
+  GRADE_SYSTEMS,
+  SYSTEM_OPTIONS,
+  emptyEditRow,
+  gridSx,
+  toEditRow,
+  toRowInput,
+  twoDecimals,
+  type EditRow,
+  type GradeRow,
+  type GradeSystem,
+} from '../grades/gradeTable'
 
 // Backend'deki GradeTableService kayıtlarıyla aynı alanlar.
-type Summary = { id: number; code: string; name: string; rowCount: number }
-type Row = {
-  sourceLetter: string | null
-  sourceMin: number | null
-  sourceMax: number | null
-  targetLetter: string
-  targetPoints: number
-}
+type Summary = { id: number; code: string; name: string; system: GradeSystem; rowCount: number }
 type Detail = {
   id: number
   code: string
   name: string
+  system: GradeSystem
   description: string | null
   createdByName: string
   createdAt: string
   updatedByName: string | null
   updatedAt: string | null
-  rows: Row[]
+  rows: GradeRow[]
 }
 type YalovaGrade = { letter: string; points: number }
 
-// Ekranda düzenlenen satır: kutular metin tutar, kaydederken sayıya çevrilir.
-type EditRow = { sourceLetter: string; sourceMin: string; sourceMax: string; targetLetter: string }
-
-const toEdit = (r: Row): EditRow => ({
-  sourceLetter: r.sourceLetter ?? '',
-  sourceMin: r.sourceMin?.toString() ?? '',
-  sourceMax: r.sourceMax?.toString() ?? '',
-  targetLetter: r.targetLetter,
-})
-
-// "85,5" gibi Türkçe virgüllü yazımı da kabul eder; boş kutu = değer yok (null).
-const toNumber = (s: string): number | null => (s.trim() === '' ? null : Number(s.replace(',', '.')))
-
-// Ayarlar > Not dönüşüm tabloları (mockup: ekran 6).
+// Ayarlar > Not dönüşüm tabloları (mockup: ekran 6). Tablolar Senato İntibak Esasları EK-1'deki gibi görünür:
+// her tablo sadece kendi not sisteminin sütunlarını gösterir. Burada sadece kaydedilir; intibak formunda seçilen
+// tablo öğrencinin notunu Yalova notuna çevirmek için kullanılır.
 export default function GradeTablesPage() {
   const [tables, setTables] = useState<Summary[]>([])
   const [grades, setGrades] = useState<YalovaGrade[]>([])
@@ -65,12 +60,13 @@ export default function GradeTablesPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [newOpen, setNewOpen] = useState(false)
   const [newName, setNewName] = useState('')
+  const [newSystem, setNewSystem] = useState<GradeSystem | ''>('')
 
   // Seçili tablonun bilgisini ekrana koyar (ad kutusu + düzenlenebilir satırlar).
   function show(d: Detail) {
     setDetail(d)
     setName(d.name)
-    setRows(d.rows.map(toEdit))
+    setRows(d.rows.map((r) => toEditRow(d.system, r)))
   }
 
   // Açılışta: tablo listesi ve Yalova harf notları; ilk tablo seçilir.
@@ -92,7 +88,10 @@ export default function GradeTablesPage() {
       .catch((e: Error) => setMessage({ type: 'error', text: e.message }))
   }, [selectedId])
 
-  const pointsOf = (letter: string) => grades.find((g) => g.letter === letter)?.points.toFixed(2) ?? ''
+  const pointsOf = (letter: string) => {
+    const g = grades.find((x) => x.letter === letter)
+    return g ? twoDecimals(g.points) : ''
+  }
 
   function updateRow(index: number, field: keyof EditRow, value: string) {
     setRows(rows.map((r, i) => (i === index ? { ...r, [field]: value } : r)))
@@ -108,15 +107,7 @@ export default function GradeTablesPage() {
     try {
       const saved = await api<Detail>(`/api/grade-tables/${detail.id}`, {
         method: 'PUT',
-        body: {
-          name,
-          rows: rows.map((r) => ({
-            sourceLetter: r.sourceLetter.trim() || null,
-            sourceMin: toNumber(r.sourceMin),
-            sourceMax: toNumber(r.sourceMax),
-            targetLetter: r.targetLetter || null,
-          })),
-        },
+        body: { name, rows: rows.map((r) => toRowInput(detail.system, r)) },
       })
       show(saved)
       await reloadList()
@@ -129,26 +120,57 @@ export default function GradeTablesPage() {
   async function createTable() {
     setMessage(null)
     try {
-      const created = await api<Detail>('/api/grade-tables', { method: 'POST', body: { name: newName } })
+      const created = await api<Detail>('/api/grade-tables', {
+        method: 'POST',
+        body: { name: newName, system: newSystem || null },
+      })
       setNewOpen(false)
       setNewName('')
+      setNewSystem('')
       await reloadList()
       setSelectedId(created.id)
       // Yeni tablo boş gelir; doldurmaya başlamak için bir boş satır eklenir.
-      show({ ...created })
-      setRows([{ sourceLetter: '', sourceMin: '', sourceMax: '', targetLetter: '' }])
+      show(created)
+      setRows([emptyEditRow()])
       setMessage({ type: 'success', text: `${created.code} açıldı. Satırları doldurup Kaydet'e basın.` })
     } catch (e) {
       setMessage({ type: 'error', text: (e as Error).message })
     }
   }
 
+  // "Diğer üniversite" hücreleri: tablonun not sistemine göre bir ya da iki kutu.
+  function sourceInputs(system: GradeSystem, r: EditRow, i: number) {
+    if (system === 'SCORE') {
+      return (
+        <TableCell align="center">
+          <TextField size="small" value={r.source} placeholder="90-100 ya da DEVAMSIZ"
+            onChange={(e) => updateRow(i, 'source', e.target.value)} sx={{ width: 200 }} />
+        </TableCell>
+      )
+    }
+    return (
+      <>
+        <TableCell align="center">
+          <TextField size="small" value={r.source} placeholder={system === 'LETTER' ? 'A1' : 'A-'}
+            onChange={(e) => updateRow(i, 'source', e.target.value)} sx={{ width: 110 }} />
+        </TableCell>
+        {system === 'LETTER_NUMBER' && (
+          <TableCell align="center">
+            <TextField size="small" value={r.number} placeholder="3.70"
+              onChange={(e) => updateRow(i, 'number', e.target.value)} sx={{ width: 100 }} />
+          </TableCell>
+        )}
+      </>
+    )
+  }
+
   return (
     <>
       <Typography variant="h5">Ayarlar · Not dönüşüm tabloları</Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>
-        PT1, PT2, PT3 hazır gelir. Standart dışı bir not sistemi için yeni tablo eklenir; değerler dekanlık/senato
-        kararlarına bakılarak elle girilir.
+        PT1, PT2, PT3 Senato İntibak Esasları EK-1'deki üç tablodur. Burada sadece kaydedilir; intibak formunda seçilen
+        tablo öğrencinin notunu Yalova notuna çevirir. Başka bir not sistemi çıkarsa yeni tablo eklenir; değerler
+        dekanlık/senato kararlarına bakılarak elle girilir.
       </Typography>
 
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
@@ -186,52 +208,24 @@ export default function GradeTablesPage() {
             onChange={(e) => setName(e.target.value)}
             sx={{ mb: 1, minWidth: 360 }}
           />
+          {/* Not sistemi tablo açılırken seçilir; sütunlar ve satır kuralları buna göredir. */}
+          <Typography variant="body2" sx={{ mb: 0.5 }}>
+            <b>Not sistemi:</b> {GRADE_SYSTEMS[detail.system].label}. {GRADE_SYSTEMS[detail.system].description}
+          </Typography>
           {detail.description && (
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              {detail.description}
+              Kaynak: {detail.description}
             </Typography>
           )}
 
-          <Paper sx={{ overflowX: 'auto', mb: 2 }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Karşı üniv. harf notu</TableCell>
-                  <TableCell>Karşı üniv. puan aralığı</TableCell>
-                  <TableCell>Yalova harf notu</TableCell>
-                  <TableCell>Yalova puanı</TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableHead>
+          <Paper sx={{ overflowX: 'auto', mb: 2, display: 'inline-block', maxWidth: '100%' }}>
+            <Table size="small" sx={gridSx}>
+              <GradeTableHead system={detail.system} withAction />
               <TableBody>
                 {rows.map((r, i) => (
                   <TableRow key={i}>
-                    <TableCell>
-                      <TextField
-                        size="small"
-                        value={r.sourceLetter}
-                        onChange={(e) => updateRow(i, 'sourceLetter', e.target.value)}
-                        sx={{ width: 110 }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <TextField
-                          size="small"
-                          value={r.sourceMin}
-                          onChange={(e) => updateRow(i, 'sourceMin', e.target.value)}
-                          sx={{ width: 80 }}
-                        />
-                        -
-                        <TextField
-                          size="small"
-                          value={r.sourceMax}
-                          onChange={(e) => updateRow(i, 'sourceMax', e.target.value)}
-                          sx={{ width: 80 }}
-                        />
-                      </Box>
-                    </TableCell>
-                    <TableCell>
+                    {sourceInputs(detail.system, r, i)}
+                    <TableCell align="center">
                       <TextField
                         select
                         size="small"
@@ -246,14 +240,12 @@ export default function GradeTablesPage() {
                         ))}
                       </TextField>
                     </TableCell>
-                    {/* Puan girilmez: seçilen Yalova harfinden gelir (AA = 4.00 ...). */}
-                    <TableCell>{pointsOf(r.targetLetter)}</TableCell>
-                    <TableCell>
-                      <IconButton
-                        size="small"
-                        aria-label="Satırı sil"
-                        onClick={() => setRows(rows.filter((_, j) => j !== i))}
-                      >
+                    {/* Sayı girilmez: seçilen Yalova harfinden gelir (AA = 4.00 ...). */}
+                    <TableCell align="center" sx={{ minWidth: 70 }}>
+                      {pointsOf(r.targetLetter)}
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton size="small" aria-label="Satırı sil" onClick={() => setRows(rows.filter((_, j) => j !== i))}>
                         <DeleteOutlined fontSize="small" />
                       </IconButton>
                     </TableCell>
@@ -264,10 +256,7 @@ export default function GradeTablesPage() {
           </Paper>
 
           <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
-            <Button
-              variant="outlined"
-              onClick={() => setRows([...rows, { sourceLetter: '', sourceMin: '', sourceMax: '', targetLetter: '' }])}
-            >
+            <Button variant="outlined" onClick={() => setRows([...rows, emptyEditRow()])}>
               + Satır ekle
             </Button>
             <Button variant="contained" onClick={save}>
@@ -288,13 +277,11 @@ export default function GradeTablesPage() {
         esaslarına tam uygun olmalıdır.
       </Alert>
       <Typography variant="body2" color="text.secondary">
-        Her satırda karşı üniversitenin harf notu ya da puan aralığı (ya da ikisi) bulunur. Puan aralıkları üst üste
-        binemez. Puan aralığında belirsizlik varsa öğrenci lehine en yüksek karşılık seçilir: örneğin karşı
-        üniversitenin bir harfi 73-80 aralığına denk geliyorsa öğrenci 80 almış sayılır ve Yalova harfi 80'e göre
-        seçilir. Hiçbir tablo uymuyorsa iş dekanlığa/manuel incelemeye aktarılır.
+        Puan aralıkları üst üste binemez. Puan iki aralığın arasında kalırsa öğrenci lehine üstteki aralığın notu
+        verilir. Hiçbir tablo uymuyorsa iş dekanlığa/manuel incelemeye aktarılır.
       </Typography>
 
-      <Dialog open={newOpen} onClose={() => setNewOpen(false)}>
+      <Dialog open={newOpen} onClose={() => setNewOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Yeni puan tablosu</DialogTitle>
         <DialogContent>
           <TextField
@@ -303,8 +290,23 @@ export default function GradeTablesPage() {
             label="Tablo adı (örn. 10'luk not sistemi)"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            sx={{ mt: 1 }}
+            sx={{ mt: 1, mb: 2 }}
           />
+          {/* Tablonun sütunları bu seçime göre olur; sonradan değiştirilemez. */}
+          <TextField
+            select
+            fullWidth
+            label="Karşı üniversitenin not sistemi"
+            value={newSystem}
+            onChange={(e) => setNewSystem(e.target.value as GradeSystem)}
+            helperText={newSystem ? GRADE_SYSTEMS[newSystem].description : 'Tablonun sütunları buna göre belirlenir.'}
+          >
+            {SYSTEM_OPTIONS.map((o) => (
+              <MenuItem key={o.value} value={o.value}>
+                {o.label}
+              </MenuItem>
+            ))}
+          </TextField>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setNewOpen(false)}>Vazgeç</Button>

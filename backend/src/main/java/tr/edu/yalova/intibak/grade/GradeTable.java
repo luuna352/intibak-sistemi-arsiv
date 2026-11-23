@@ -7,6 +7,8 @@ import java.util.List;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -32,6 +34,11 @@ public class GradeTable {
     @Column(length = 500)
     private String description;
 
+    // Karşı üniversitenin not sistemi (V12): tablo açılırken seçilir, sonra değişmez.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "grade_system", nullable = false, length = 20)
+    private GradeSystem system;
+
     @Column(name = "created_by_name", nullable = false, length = 200)
     private String createdByName;
 
@@ -53,9 +60,10 @@ public class GradeTable {
     protected GradeTable() {
     }
 
-    public GradeTable(String code, String name, String createdByName, Instant createdAt) {
+    public GradeTable(String code, String name, GradeSystem system, String createdByName, Instant createdAt) {
         this.code = code;
         this.name = name;
+        this.system = system;
         this.createdByName = createdByName;
         this.createdAt = createdAt;
     }
@@ -86,6 +94,10 @@ public class GradeTable {
 
     public String getDescription() {
         return description;
+    }
+
+    public GradeSystem getSystem() {
+        return system;
     }
 
     public String getCreatedByName() {

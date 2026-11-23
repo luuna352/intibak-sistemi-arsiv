@@ -5,26 +5,21 @@ import AccordionSummary from '@mui/material/AccordionSummary'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
-import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Typography from '@mui/material/Typography'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 import { api } from '../api/client'
+import GradeTableHead from '../grades/GradeTableHead'
+import { GRADE_SYSTEMS, gridSx, sourceCells, twoDecimals, type GradeRow, type GradeSystem } from '../grades/gradeTable'
 
-// Backend: GradeTableService.Detail / Row. Yalova puanı harften hesaplanıp gelir.
-type Row = {
-  sourceLetter: string | null
-  sourceMin: number | null
-  sourceMax: number | null
-  targetLetter: string
-  targetPoints: number
-}
-type Detail = { id: number; code: string; name: string; description: string | null; rows: Row[] }
+// Backend: GradeTableService.Detail.
+type Detail = { id: number; code: string; name: string; system: GradeSystem; description: string | null; rows: GradeRow[] }
 
 /**
- * İntibak formunda seçilen not dönüşüm tablosunun salt okunur görünümü. Akademisyen notların nasıl çevrildiğini
- * başka bir sayfaya gitmeden kontrol edebilsin diye eşleştirme tablosunun altında durur. Tabloyu değiştirmek
- * Ayarlar > Not tabloları sayfasından yapılır (burada düzenleme yok, yanlışlıkla değişmesin).
+ * İntibak formunda seçilen not dönüşüm tablosunun salt okunur görünümü (Ayarlar'daki tabloyla aynı biçim, EK-1
+ * gibi). Akademisyen notların nasıl çevrildiğini başka bir sayfaya gitmeden kontrol edebilsin diye eşleştirme
+ * tablosunun altında durur. Tabloyu değiştirmek Ayarlar > Not tabloları sayfasından yapılır (burada düzenleme yok,
+ * yanlışlıkla değişmesin).
  */
 export default function GradeTablePreview({ gradeTableId }: { gradeTableId: string }) {
   const [table, setTable] = useState<Detail | null>(null)
@@ -47,12 +42,6 @@ export default function GradeTablePreview({ gradeTableId }: { gradeTableId: stri
     return error ? <Typography color="error">{error}</Typography> : null
   }
 
-  // "90 - 100" gibi aralık metni; aralık yoksa boş. Alt ve üst aynıysa (PT2'deki 3.70 gibi tek sayı) tek değer.
-  const range = (r: Row) => {
-    if (r.sourceMin === null) return ''
-    return Number(r.sourceMin) === Number(r.sourceMax) ? `${r.sourceMin}` : `${r.sourceMin} - ${r.sourceMax}`
-  }
-
   return (
     <Accordion defaultExpanded variant="outlined" sx={{ mt: 2 }}>
       <AccordionSummary expandIcon={<ExpandMore />}>
@@ -61,28 +50,21 @@ export default function GradeTablePreview({ gradeTableId }: { gradeTableId: stri
         </Typography>
       </AccordionSummary>
       <AccordionDetails>
-        {table.description && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            {table.description}
-          </Typography>
-        )}
-        <Table size="small" sx={{ maxWidth: 620 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell>Karşı üniv. harf notu</TableCell>
-              <TableCell>Karşı üniv. puan aralığı</TableCell>
-              <TableCell>Yalova harf notu</TableCell>
-              <TableCell>Yalova puanı</TableCell>
-            </TableRow>
-          </TableHead>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          {GRADE_SYSTEMS[table.system].description}
+        </Typography>
+        <Table size="small" sx={{ ...gridSx, width: 'auto' }}>
+          <GradeTableHead system={table.system} />
           <TableBody>
             {table.rows.map((r, i) => (
               <TableRow key={i}>
-                <TableCell>{r.sourceLetter ?? ''}</TableCell>
-                <TableCell>{range(r)}</TableCell>
-                <TableCell>{r.targetLetter}</TableCell>
-                {/* 3.5 -> "3,50": Türkçe yazımla iki basamak. */}
-                <TableCell>{Number(r.targetPoints).toFixed(2).replace('.', ',')}</TableCell>
+                {sourceCells(table.system, r).map((text, j) => (
+                  <TableCell key={j} align="center">
+                    {text}
+                  </TableCell>
+                ))}
+                <TableCell align="center">{r.targetLetter}</TableCell>
+                <TableCell align="center">{twoDecimals(r.targetPoints)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
