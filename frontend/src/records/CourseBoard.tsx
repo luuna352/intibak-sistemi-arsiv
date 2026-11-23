@@ -42,7 +42,7 @@ type Props = {
 }
 
 // Sol tablonun sütunları: seç, kod, ad, yarıyıl, kredi, AKTS, not, dil, durum, içerik/sil düğmeleri.
-const SOURCE_COLUMNS = '32px 76px minmax(140px, 1fr) 52px 48px 48px 52px 60px 88px 64px'
+const SOURCE_COLUMNS = '30px 64px minmax(110px, 1fr) 36px 40px 40px 44px 52px 84px 60px'
 
 /**
  * İki sütunlu karşılaştırma ekranı. Solda öğrencinin bütün dersleri (eşleşen ve eşleşmeyen birlikte, elle
@@ -156,14 +156,15 @@ export default function CourseBoard({
         içeriğini görmek için ▾ düğmesine basın.
       </Typography>
 
-      {/* Geniş ekranda iki sütun (sol: öğrenci, sağ: Yalova), dar ekranda alt alta; her sütun kendi içinde kayar. */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '3fr 2fr' }, gap: 2 }}>
+      {/* Geniş ekranda iki sütun (sol: öğrenci, sağ: Yalova), dar ekranda alt alta; her sütun kendi içinde kayar.
+          minmax(0, ...): sol tablo geniş gelirse sağ sütunu sıkıştırmasın, kendi içinde yana kaysın. */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 3fr) minmax(300px, 2fr)' }, gap: 2 }}>
         <Box>
           <Typography variant="caption" color="text.secondary">
             Öğrencinin dersleri (transkriptteki bütün dersler)
           </Typography>
           <Box sx={{ maxHeight: 560, overflow: 'auto', border: 1, borderColor: 'divider', borderRadius: 1 }}>
-            <Box sx={{ minWidth: 700 }}>
+            <Box sx={{ minWidth: 600 }}>
               <Box sx={{ display: 'grid', gridTemplateColumns: SOURCE_COLUMNS, gap: 0.5, px: 0.5, py: 0.5,
                 position: 'sticky', top: 0, bgcolor: 'background.paper', zIndex: 1, borderBottom: 1,
                 borderColor: 'divider' }}>
