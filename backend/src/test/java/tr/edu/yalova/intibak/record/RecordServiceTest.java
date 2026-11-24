@@ -25,6 +25,7 @@ import tr.edu.yalova.intibak.grade.GradeTable;
 import tr.edu.yalova.intibak.grade.GradeTableRepository;
 import tr.edu.yalova.intibak.grade.GradeTableRow;
 import tr.edu.yalova.intibak.grade.YalovaGrade;
+import tr.edu.yalova.intibak.setting.ActiveYearService;
 
 /** Kayıt kuralları: TC kontrolü, 4 durum geçişleri, iptal/geri al, arama ve TC gizleme. */
 class RecordServiceTest {
@@ -41,7 +42,10 @@ class RecordServiceTest {
     void setUp() {
         repository = mock(IntibakRecordRepository.class);
         gradeTables = mock(GradeTableRepository.class);
-        service = new RecordService(repository, gradeTables, mock(CurriculumPlanRepository.class),
+        // Ayarlardaki aktif yıl 2026 (2026-2027).
+        ActiveYearService activeYear = mock(ActiveYearService.class);
+        when(activeYear.startYear()).thenReturn(2026);
+        service = new RecordService(repository, gradeTables, mock(CurriculumPlanRepository.class), activeYear,
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -77,6 +81,37 @@ class RecordServiceTest {
         assertThat(created.facultyDepartment()).isNull();
         assertThat(created.createdByName()).isEqualTo("Dr. Deneme");
         assertThat(created.updatedByName()).isNull();
+    }
+
+    @Test
+    void academicYearDefaultsToActiveYearAndStaysWithTheRecord() {
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        RecordService.Input base = input(VALID_TC, "Ayşe");
+
+        // Yıl seçilmezse ayarlardaki aktif yıl yazılır.
+        RecordService.Detail created = service.create(base, "Üye 1");
+        assertThat(created.academicStartYear()).isEqualTo(2026);
+        assertThat(created.academicYearLabel()).isEqualTo("2026-2027");
+
+        // Komisyon başka bir yıl seçebilir.
+        assertThat(service.create(withYear(base, 2025), "Üye 1").academicYearLabel()).isEqualTo("2025-2026");
+
+        // Değiştirirken yıl gelmezse kaydın kendi yılı kalır, gelirse değişir.
+        IntibakRecord record = existing();
+        record.setAcademicStartYear(2024);
+        assertThat(service.update(1L, base, "Üye 2").academicStartYear()).isEqualTo(2024);
+        assertThat(service.update(1L, withYear(base, 2027), "Üye 2").academicStartYear()).isEqualTo(2027);
+
+        // Aralık dışı yıl kaydedilmez.
+        assertThatThrownBy(() -> service.create(withYear(base, 1999), "Üye 1"))
+                .isInstanceOf(BadRequestException.class).hasMessageContaining("Eğitim-öğretim yılı");
+    }
+
+    private static RecordService.Input withYear(RecordService.Input in, int year) {
+        return new RecordService.Input(in.tcNo(), in.fullName(), in.transferType(), in.university(),
+                in.facultyDepartment(), in.registrationDate(), in.prepStatus(), in.departmentLanguage(),
+                in.gradeTableId(), in.planId(), in.matches(), in.placementClassLevel(), in.placementSemester(),
+                in.confirmed(), in.sourceCourses(), year);
     }
 
     @Test

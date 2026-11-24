@@ -69,6 +69,11 @@ public class IntibakRecord {
     @Column(name = "placement_semester")
     private Integer placementSemester;
 
+    // V15: kaydın eğitim-öğretim yılının ilk yılı (2026 = "2026-2027"). Açılışta aktif yıl yazılır, komisyon
+    // değiştirebilir; aktif yıl sonradan değişse de bu kayıt (ve Word çıktısı) kendi yılında kalır.
+    @Column(name = "academic_start_year", nullable = false)
+    private int academicStartYear;
+
     // V13: öğrencinin ders içerikleri transkriptin içinde mi (o zaman ayrı içerik belgesi yüklenmez).
     @Column(name = "content_in_transcript", nullable = false)
     private boolean contentInTranscript;
@@ -179,6 +184,15 @@ public class IntibakRecord {
 
     public List<IntibakSourceCourse> getSourceCourses() {
         return sourceCourses;
+    }
+
+    /** Kaydın eğitim-öğretim yılı (aralık kontrolü RecordService'te). Kaydın durumunu kendisi değiştirmez. */
+    public void setAcademicStartYear(int academicStartYear) {
+        this.academicStartYear = academicStartYear;
+    }
+
+    public int getAcademicStartYear() {
+        return academicStartYear;
     }
 
     /** Komisyonun sınıf/dönem kararı; ikisi de null = sistemin önerisi kullanılır (kontrol RecordService'te). */

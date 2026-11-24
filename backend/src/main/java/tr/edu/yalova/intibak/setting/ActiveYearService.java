@@ -19,8 +19,9 @@ import tr.edu.yalova.intibak.common.BadRequestException;
 public class ActiveYearService {
 
     static final String KEY = "active_start_year";
-    static final int MIN_YEAR = 2000;
-    static final int MAX_YEAR = 2100;
+    // Yıl aralığı; kayıtların yılı da (RecordService, V15 CHECK) aynı aralıkta olmalı.
+    public static final int MIN_YEAR = 2000;
+    public static final int MAX_YEAR = 2100;
     // Sistem en fazla 3. sınıfa yerleştirir (kredi > 60 ya da DGS), ama komisyon yerleşimi 4. sınıf dahil
     // değiştirebilir (kural 8); bu yüzden plan eşlemesi 1-4. sınıf için gösterilir.
     static final int MAX_PLACEMENT_CLASS = 4;
@@ -48,6 +49,12 @@ public class ActiveYearService {
         return toResponse(find());
     }
 
+    /** Sadece aktif yılın ilk yılı (örn. 2026); yeni intibak kaydı açılırken kayda yazılır. */
+    @Transactional(readOnly = true)
+    public int startYear() {
+        return Integer.parseInt(find().getValue());
+    }
+
     /** Aktif yılı değiştirir; değiştirenin o anki görünen adı metin olarak yazılır. */
     @Transactional
     public ActiveYear set(int startYear, String changedByName) {
@@ -59,8 +66,8 @@ public class ActiveYearService {
         return toResponse(setting);
     }
 
-    /** "2026" -> "2026-2027": ilk yıl girilince ikinci yıl otomatik bir fazlasıdır. */
-    static String label(int startYear) {
+    /** "2026" -> "2026-2027": ilk yıl girilince ikinci yıl otomatik bir fazlasıdır (Word çıktısı da kullanır). */
+    public static String label(int startYear) {
         return startYear + "-" + (startYear + 1);
     }
 

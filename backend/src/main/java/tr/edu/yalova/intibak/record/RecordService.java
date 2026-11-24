@@ -22,6 +22,7 @@ import tr.edu.yalova.intibak.grade.GradeTable;
 import tr.edu.yalova.intibak.grade.GradeTableRepository;
 import tr.edu.yalova.intibak.grade.GradeTableRow;
 import tr.edu.yalova.intibak.grade.YalovaGrade;
+import tr.edu.yalova.intibak.setting.ActiveYearService;
 
 /**
  * İntibak kayıtları: listeleme/arama, kayıt açma, değiştirme, iptal ve iptali geri alma; formdaki ders eşleştirme
@@ -42,13 +43,16 @@ public class RecordService {
     private final IntibakRecordRepository repository;
     private final GradeTableRepository gradeTables;
     private final CurriculumPlanRepository plans;
+    // Yeni kayıt açılırken formda yıl gelmezse ayarlardaki aktif yıl yazılır.
+    private final ActiveYearService activeYear;
     private final Clock clock;
 
     public RecordService(IntibakRecordRepository repository, GradeTableRepository gradeTables,
-            CurriculumPlanRepository plans, Clock clock) {
+            CurriculumPlanRepository plans, ActiveYearService activeYear, Clock clock) {
         this.repository = repository;
         this.gradeTables = gradeTables;
         this.plans = plans;
+        this.activeYear = activeYear;
         this.clock = clock;
     }
 
@@ -98,7 +102,8 @@ public class RecordService {
             DepartmentLanguage departmentLanguage, RecordStatus status,
             String statusLabel, String createdByName, Instant createdAt, String updatedByName, Instant updatedAt,
             Long gradeTableId, Long planId, Evaluation evaluation, Integer placementClassLevel,
-            Integer placementSemester, List<SourceCourseView> sourceCourses) {
+            Integer placementSemester, List<SourceCourseView> sourceCourses, int academicStartYear,
+            String academicYearLabel) {
     }
 
     public record TopicInput(String text, Boolean covered) {
@@ -131,21 +136,34 @@ public class RecordService {
      * Formun tamamı: öğrenci bilgileri, PT, plan, eşleştirme satırları ve "Kontrol ettim / Onaylıyorum" kutusu.
      * Kutu işaretli değilse (confirmed != true) kayıt yapılmaz. placementClassLevel/placementSemester: komisyonun
      * sınıf/dönem kararı; ikisi de boşsa sistemin önerisi geçerlidir. sourceCourses: öğrencinin ders listesi.
+     * academicStartYear: kaydın eğitim-öğretim yılının ilk yılı; boşsa yeni kayıtta aktif yıl, değiştirmede kaydın
+     * mevcut yılı kalır.
      */
     public record Input(String tcNo, String fullName, TransferType transferType, String university,
             String facultyDepartment, LocalDate registrationDate, PrepStatus prepStatus,
             DepartmentLanguage departmentLanguage, Long gradeTableId, Long planId, List<MatchInput> matches,
             Integer placementClassLevel, Integer placementSemester, Boolean confirmed,
-            List<SourceCourseInput> sourceCourses) {
+            List<SourceCourseInput> sourceCourses, Integer academicStartYear) {
 
-        /** Ders listesi olmadan (eski biçim; testlerde kısa yol). */
+        /** Yıl gelmeden (yeni kayıtta aktif yıl kullanılır; testlerde kısa yol). */
+        public Input(String tcNo, String fullName, TransferType transferType, String university,
+                String facultyDepartment, LocalDate registrationDate, PrepStatus prepStatus,
+                DepartmentLanguage departmentLanguage, Long gradeTableId, Long planId, List<MatchInput> matches,
+                Integer placementClassLevel, Integer placementSemester, Boolean confirmed,
+                List<SourceCourseInput> sourceCourses) {
+            this(tcNo, fullName, transferType, university, facultyDepartment, registrationDate, prepStatus,
+                    departmentLanguage, gradeTableId, planId, matches, placementClassLevel, placementSemester,
+                    confirmed, sourceCourses, null);
+        }
+
+        /** Ders listesi ve yıl olmadan (eski biçim; testlerde kısa yol). */
         public Input(String tcNo, String fullName, TransferType transferType, String university,
                 String facultyDepartment, LocalDate registrationDate, PrepStatus prepStatus,
                 DepartmentLanguage departmentLanguage, Long gradeTableId, Long planId, List<MatchInput> matches,
                 Integer placementClassLevel, Integer placementSemester, Boolean confirmed) {
             this(tcNo, fullName, transferType, university, facultyDepartment, registrationDate, prepStatus,
                     departmentLanguage, gradeTableId, planId, matches, placementClassLevel, placementSemester,
-                    confirmed, null);
+                    confirmed, null, null);
         }
     }
 
@@ -216,6 +234,9 @@ public class RecordService {
     public Detail create(Input input, String actorName) {
         Prepared prepared = prepare(input);
         IntibakRecord record = new IntibakRecord(prepared.info(), actorName, Instant.now(clock));
+        // Formda yıl seçilmediyse kayıt bu yılın (ayarlardaki aktif yılın) formudur.
+        record.setAcademicStartYear(input.academicStartYear() == null ? activeYear.startYear()
+                : input.academicStartYear());
         record.replaceSourceCourses(prepared.sources());
         record.replaceMatches(input.gradeTableId(), input.planId(), prepared.matches());
         record.decidePlacement(input.placementClassLevel(), input.placementSemester());
@@ -230,6 +251,10 @@ public class RecordService {
         }
         Prepared prepared = prepare(input);
         record.update(prepared.info(), actorName, Instant.now(clock));
+        // Yıl gelmezse kaydın kendi yılı kalır: aktif yıl değişti diye eski kaydın yılı değişmez.
+        if (input.academicStartYear() != null) {
+            record.setAcademicStartYear(input.academicStartYear());
+        }
         record.replaceSourceCourses(prepared.sources());
         record.replaceMatches(input.gradeTableId(), input.planId(), prepared.matches());
         record.decidePlacement(input.placementClassLevel(), input.placementSemester());
@@ -300,6 +325,11 @@ public class RecordService {
             throw new BadRequestException("Seçilen ders planı bulunamadı.");
         }
         checkPlacement(in.placementClassLevel(), in.placementSemester());
+        Integer year = in.academicStartYear();
+        if (year != null && (year < ActiveYearService.MIN_YEAR || year > ActiveYearService.MAX_YEAR)) {
+            throw new BadRequestException("Eğitim-öğretim yılı " + ActiveYearService.MIN_YEAR + " ile "
+                    + ActiveYearService.MAX_YEAR + " arasında olmalı.");
+        }
 
         // Öğrencinin ders listesi: her satırın adı zorunlu, sayılar ve metin uzunlukları kontrol edilir.
         List<SourceCourseInput> sources = sourcesOf(in);
@@ -591,6 +621,7 @@ public class RecordService {
                 r.getDepartmentLanguage(), r.getStatus(),
                 r.getStatus().label(), r.getCreatedByName(), r.getCreatedAt(), r.getUpdatedByName(),
                 r.getUpdatedAt(), r.getGradeTableId(), r.getPlanId(), evaluation, r.getPlacementClassLevel(),
-                r.getPlacementSemester(), sources);
+                r.getPlacementSemester(), sources, r.getAcademicStartYear(),
+                ActiveYearService.label(r.getAcademicStartYear()));
     }
 }

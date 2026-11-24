@@ -26,6 +26,7 @@ import tr.edu.yalova.intibak.common.BadRequestException;
 import tr.edu.yalova.intibak.common.NotFoundException;
 import tr.edu.yalova.intibak.curriculum.CurriculumPlanRepository;
 import tr.edu.yalova.intibak.grade.GradeTableRepository;
+import tr.edu.yalova.intibak.setting.ActiveYearService;
 
 /** Kayıt belgeleri: dosya türü kontrolü, değiştirme, "içerikler transkriptte" ve aynı öğrencinin diğer kayıtları. */
 class RecordDocumentServiceTest {
@@ -156,7 +157,8 @@ class RecordDocumentServiceTest {
         IntibakRecord second = new IntibakRecord(RecordService.validate(input("İkinci Üniversite")), "Üye 1", NOW);
         when(records.findByTcNoOrderByCreatedAtAsc(VALID_TC)).thenReturn(List.of(first, second));
         RecordService recordService = new RecordService(records, mock(GradeTableRepository.class),
-                mock(CurriculumPlanRepository.class), Clock.fixed(NOW, ZoneOffset.UTC));
+                mock(CurriculumPlanRepository.class), mock(ActiveYearService.class),
+                Clock.fixed(NOW, ZoneOffset.UTC));
 
         assertThat(recordService.sameStudent("100 000 001 46", null))
                 .extracting(RecordService.ListItem::university)

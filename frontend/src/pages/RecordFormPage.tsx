@@ -55,6 +55,9 @@ type Detail = RecordDetail & {
   placementSemester: number | null
   // Öğrencinin transkriptindeki bütün dersler (V14).
   sourceCourses: SourceCourseView[]
+  // Kaydın eğitim-öğretim yılı (V15): 2026 = "2026-2027"; aktif yıl sonradan değişse de kayıt kendi yılında kalır.
+  academicStartYear: number
+  academicYearLabel: string
 }
 
 // Komisyonun seçebileceği sınıf/dönemler: 1. sınıf (1. ve 2. dönem) ... 4. sınıf (7. ve 8. dönem). Değer "2-3" gibi.
@@ -70,6 +73,8 @@ type Form = {
   registrationDate: string
   prepStatus: string
   departmentLanguage: string
+  // Boşsa (yeni kayıtta) ayarlardaki aktif yıl kullanılır.
+  academicStartYear: string
 }
 const EMPTY: Form = {
   tcNo: '',
@@ -80,9 +85,10 @@ const EMPTY: Form = {
   registrationDate: '',
   prepStatus: 'UNKNOWN',
   departmentLanguage: 'UNKNOWN',
+  academicStartYear: '',
 }
 
-const toForm = (d: RecordDetail): Form => ({
+const toForm = (d: Detail): Form => ({
   tcNo: d.tcNo,
   fullName: d.fullName,
   transferType: d.transferType,
@@ -91,7 +97,16 @@ const toForm = (d: RecordDetail): Form => ({
   registrationDate: d.registrationDate ?? '',
   prepStatus: d.prepStatus,
   departmentLanguage: d.departmentLanguage,
+  academicStartYear: String(d.academicStartYear),
 })
+
+// Yıl seçenekleri: aktif yılın 5 yıl öncesinden 1 yıl sonrasına; kaydın kendi yılı bu aralıkta değilse o da eklenir.
+function yearOptions(activeStartYear: number | undefined, current: string): number[] {
+  const years = activeStartYear === undefined ? [] : [-5, -4, -3, -2, -1, 0, 1].map((d) => activeStartYear + d)
+  const own = Number(current)
+  if (current !== '' && !years.includes(own)) years.push(own)
+  return years.sort((a, b) => b - a)
+}
 
 // Yeni intibak formu (/yeni-form) ve var olan kaydın formu (/kayitlar/:id): öğrenci bilgileri, ders eşleştirme,
 // otomatik sınıf/dönem ve "Kontrol ettim / Onaylıyorum" kutusu. Word çıktısı sonraki aşamada (7 Aralık).
@@ -226,6 +241,9 @@ export default function RecordFormPage() {
     )
   }
 
+  // Kaydın yılı: seçildiyse o; yeni kayıtta seçilmediyse ayarlardaki aktif yıl (Word formunun başında yazar).
+  const yearValue = form.academicStartYear || (activeYear ? String(activeYear.startYear) : '')
+
   const set = (field: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [field]: e.target.value })
 
@@ -243,6 +261,7 @@ export default function RecordFormPage() {
       matches: matches.map((m) => toMatchInput(m, indexOf)),
       placementClassLevel: decided?.classLevel ?? null,
       placementSemester: decided?.semester ?? null,
+      academicStartYear: yearValue === '' ? null : Number(yearValue),
       confirmed,
     }
     try {
@@ -332,6 +351,14 @@ export default function RecordFormPage() {
             {PREP_OPTIONS.map((o) => (
               <MenuItem key={o.value} value={o.value}>
                 {o.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField select label="Eğitim-öğretim yılı" value={yearValue} onChange={set('academicStartYear')}
+            disabled={cancelled} helperText="Word formunun başındaki yıl; yeni kayıtta aktif yıl gelir">
+            {yearOptions(activeYear?.startYear, yearValue).map((y) => (
+              <MenuItem key={y} value={String(y)}>
+                {y}-{y + 1}
               </MenuItem>
             ))}
           </TextField>
